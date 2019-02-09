@@ -1,3 +1,3 @@
 # slacks
 
-The easist way to post to Slack :D
+The easiest way to post to Slack :D
