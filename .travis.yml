@@ -16,6 +16,33 @@ matrix:
     - env: TARGET=x86_64-apple-darwin
       os: osx
 
+before_install:
+  - set -e
+  - rustup self update
+
+install:
+  - sh ci/install.sh
+  - source ~/.cargo/env || true
+
+script:
+  - bash ci/script.sh
+
+after_script: set +e
+
+before_deploy:
+  - sh ci/before_deploy.sh
+
+deploy:
+  api_key:
+    secure: WPxP+uWBem0/URp6Z/5JoyjpQ1aMS2UiC0W34IJNBlzUobXKvAkbAXlAOFITiU0OfYtiA7N2KxukFNBSl85JlJLLtrzf2EjNMXicgbdHZe4m0IFkoWlqv/zxh42cefgRE/L7sHVY2gK1S9VAeY2zJc9BVsEjCAIc2y475vHlHCmJ3aObfmqySKfLJMEcIa+Q29mwmobD1+bKfnfYCFbG7o84ElrGZ3+NDyR3AsUELDwr/Ag3rUTsJcTIG4QoHBvZhv+lKOTu74FsYLI7G9h3vVRHUb6grzauKSbAIKfx1X4nIUh0LKzRNCADBHMFK0u5SPu1IJx4uJ8xEeP8J/f3K3rQakPIvDR/kZt+7yawLvDVVTpgY5d+ZsenWI4/lWM9KOfmCjrZIHMsKUAt1lVLn1cU3cEI/F9F4/mLNxWYUTL+IPCy4Nq1EoS7XgzE3JVf2YcCN8sfxbZAkI5Utpr24D1LVihTF9YrTKgUytJBDNwuB0/L0pmCcDE0i2A+0UiFWmDSjnFR6IrEvNPYV8k1/VpUG/XaBMl4YNeaJSUZ8G8/JEqzMdsWMCXmAcao5Sy3iqgPqPxADbn+EKBBdnK1GG+0jR1+Oe0r9542bByZCewXU+Bq7va1XX6xRTOjoLc01+N3hJZfObzi+rdBajf03bLcLK2oLc9WMTq+8OJyL04=
+  file_glob: true
+  file: $CRATE_NAME-$TRAVIS_TAG-$TARGET.*
+  on:
+    condition: $TRAVIS_RUST_VERSION = stable
+    tags: true
+  provider: releases
+  skip_cleanup: true
+
 cache: cargo
 before_cache:
   # Travis can't cache files that are not readable by "others"
