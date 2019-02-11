@@ -24,13 +24,13 @@ Usage:
     slacks --version
 
 Options:
+    -                   Read message text from STDIN.
+    -u <username>       Set username. (default: slacks)
+    -i <icon_emoji>     Set icon emoji. (default: :robot_face:)
+    -c <channel>        Set posting channel. (default: #general)
+    -v                  Show debug messages.
     -h, --help          Show this message.
-    -u <username>       User name (default: slacks)
-    -i <icon_emoji>     Icon emoji (default: :robot_face:)
-    -c <channel>        Channel name (default: #general)
-    -v                  Verbose Mode
     --version           Show version.
-    -                   Read from STDIN
 ";
 
 #[derive(Serialize,Deserialize,Debug)]
