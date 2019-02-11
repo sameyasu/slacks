@@ -18,8 +18,8 @@ const TIMEOUT_IN_SEC: u64 = 10;
 
 const USAGE: &'static str = "
 Usage:
-    slacks [-u <username>] [-i <icon_emoji>] [-c <channel>] [-v] -
-    slacks [-u <username>] [-i <icon_emoji>] [-c <channel>] [-v] <message>
+    slacks [-u <username>] [-i <icon_emoji>] [-c <channel>] [--debug] -
+    slacks [-u <username>] [-i <icon_emoji>] [-c <channel>] [--debug] <message>
     slacks -h | --help
     slacks --version
 
@@ -28,7 +28,7 @@ Options:
     -u <username>       Set username. (default: slacks)
     -i <icon_emoji>     Set icon emoji. (default: :robot_face:)
     -c <channel>        Set posting channel. (default: #general)
-    -v                  Show debug messages.
+    --debug             Show debug messages.
     -h, --help          Show this message.
     --version           Show version.
 ";
@@ -61,7 +61,7 @@ fn main() {
     // TODO: panicにならないようにエラーメッセージ出力して終了させる
     let webhook_url = std::env::var("SLACK_WEBHOOK_URL").unwrap();
 
-    if is_verbose_mode(&args) {
+    if is_debug_mode(&args) {
         println!("Args: {:?}", args);
     }
 
@@ -71,17 +71,17 @@ fn main() {
         icon_emoji: get_icon_emoji(&args).unwrap_or_else(|e| e.exit()),
         text: get_message(&args).unwrap_or_else(|e| e.exit())
     };
-    if is_verbose_mode(&args) {
+    if is_debug_mode(&args) {
         println!("Payload: {:?}", payload);
     }
 
     let json = serde_json::to_string(&payload).unwrap();
-    if is_verbose_mode(&args) {
+    if is_debug_mode(&args) {
         println!("JSON: {}", &json);
     }
 
     let resp = post_message(&webhook_url, &json).unwrap_or_else(|e| e.exit());
-    if is_verbose_mode(&args) {
+    if is_debug_mode(&args) {
         println!("Url: {:?}", resp.url().as_str());
         println!("Status: {:?}", resp.status());
     }
@@ -156,6 +156,6 @@ fn get_message(args: &docopt::ArgvMap) -> Result<String, Error> {
     }
 }
 
-fn is_verbose_mode(args: &docopt::ArgvMap) -> bool {
-    args.get_bool("-v")
+fn is_debug_mode(args: &docopt::ArgvMap) -> bool {
+    args.get_bool("--debug")
 }
