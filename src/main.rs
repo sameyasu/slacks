@@ -31,6 +31,10 @@ Options:
     --debug             Show debug messages.
     -h, --help          Show this message.
     --version           Show version.
+
+Environment Variables:
+    SLACK_WEBHOOK_URL   Incoming Webhook URL. (required)
+
 ";
 
 #[derive(Serialize,Deserialize,Debug)]
@@ -58,8 +62,7 @@ fn main() {
         err.exit();
     }
 
-    // TODO: panicにならないようにエラーメッセージ出力して終了させる
-    let webhook_url = std::env::var("SLACK_WEBHOOK_URL").unwrap();
+    let webhook_url = get_webhook_url().unwrap_or_else(|e| e.exit());
 
     if is_debug_mode(&args) {
         println!("Args: {:?}", args);
@@ -158,4 +161,17 @@ fn get_message(args: &docopt::ArgvMap) -> Result<String, Error> {
 
 fn is_debug_mode(args: &docopt::ArgvMap) -> bool {
     args.get_bool("--debug")
+}
+
+fn get_webhook_url() -> Result<String, Error> {
+    let regexp = Regex::new(r"\Ahttps://hooks.slack.com/([a-zA-Z0-9]+/?){1,}\z").unwrap();
+    match std::env::var("SLACK_WEBHOOK_URL") {
+        Ok(url) => {
+            match &url {
+                url if regexp.is_match(url) => Ok(url.to_string()),
+                _ => Err(Error::Argv("SLACK_WEBHOOK_URL is invalid URL.".to_string()))
+            }
+        },
+        _ => Err(Error::Argv("SLACK_WEBHOOK_URL is not set.".to_string()))
+    }
 }
