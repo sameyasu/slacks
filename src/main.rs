@@ -20,8 +20,10 @@ const USAGE: &'static str = "
 Usage:
     slacks [-u <username>] [-i <icon_emoji>] [-c <channel>] [-v] -
     slacks [-u <username>] [-i <icon_emoji>] [-c <channel>] [-v] <message>
+    slacks -h | --help
 
 Options:
+    -h, --help          Show this message.
     -u <username>       User name (default: slacks)
     -i <icon_emoji>     Icon emoji (default: :robot_face:)
     -c <channel>        Channel name (default: #general)
@@ -41,6 +43,11 @@ fn main() {
     let args = Docopt::new(USAGE)
                     .and_then(|d| d.parse())
                     .unwrap_or_else(|e| e.exit());
+
+    if args.get_bool("-h") || args.get_bool("--help") {
+        let err = Error::Help;
+        err.exit();
+    }
 
     // TODO: panicにならないようにエラーメッセージ出力して終了させる
     let webhook_url = std::env::var("SLACK_WEBHOOK_URL").unwrap();
@@ -84,13 +91,13 @@ fn post_message(url: &str, json: &str) -> Result<reqwest::Response, Error> {
             } else {
                 Err(
                     Error::Argv(
-                        format!("Failed to request to Slack. StatusCode: {}", res.status())
+                        format!("Failed to post to Slack. StatusCode: {}", res.status())
                     )
                 )
             }
         },
         Err(err) => Err(
-            Error::Deserialize(format!("Failed to request to Slack. Error: {}", err))
+            Error::Deserialize(format!("Failed to post to Slack. Error: {}", err))
         )
     }
 }
