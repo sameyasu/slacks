@@ -18,15 +18,23 @@ const TIMEOUT_IN_SEC: u64 = 10;
 
 const USAGE: &'static str = "
 Usage:
-    slacks [-u <username>] [-i <icon_emoji>] [-c <channel>] [-v] -
-    slacks [-u <username>] [-i <icon_emoji>] [-c <channel>] [-v] <message>
+    slacks [-u <username>] [-i <icon_emoji>] [-c <channel>] [--debug] -
+    slacks [-u <username>] [-i <icon_emoji>] [-c <channel>] [--debug] <message>
+    slacks -h | --help
+    slacks --version
 
 Options:
-    -u <username>       User name (default: slacks)
-    -i <icon_emoji>     Icon emoji (default: :robot_face:)
-    -c <channel>        Channel name (default: #general)
-    -v                  Verbose Mode
-    -                   Read from STDIN
+    -                   Read message text from STDIN.
+    -u <username>       Set username. (default: slacks)
+    -i <icon_emoji>     Set icon emoji. (default: :robot_face:)
+    -c <channel>        Set posting channel. (default: #general)
+    --debug             Show debug messages.
+    -h, --help          Show this message.
+    --version           Show version.
+
+Environment Variables:
+    SLACK_WEBHOOK_URL   Incoming Webhook URL. (required)
+
 ";
 
 #[derive(Serialize,Deserialize,Debug)]
@@ -42,10 +50,21 @@ fn main() {
                     .and_then(|d| d.parse())
                     .unwrap_or_else(|e| e.exit());
 
-    // TODO: panicにならないようにエラーメッセージ出力して終了させる
-    let webhook_url = std::env::var("SLACK_WEBHOOK_URL").unwrap();
+    if args.get_bool("-h") || args.get_bool("--help") {
+        let err = Error::Help;
+        err.exit();
+    }
 
-    if is_verbose_mode(&args) {
+    if args.get_bool("--version") {
+        let err = Error::Usage(
+            format!("{} v{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"))
+        );
+        err.exit();
+    }
+
+    let webhook_url = get_webhook_url().unwrap_or_else(|e| e.exit());
+
+    if is_debug_mode(&args) {
         println!("Args: {:?}", args);
     }
 
@@ -55,17 +74,17 @@ fn main() {
         icon_emoji: get_icon_emoji(&args).unwrap_or_else(|e| e.exit()),
         text: get_message(&args).unwrap_or_else(|e| e.exit())
     };
-    if is_verbose_mode(&args) {
+    if is_debug_mode(&args) {
         println!("Payload: {:?}", payload);
     }
 
     let json = serde_json::to_string(&payload).unwrap();
-    if is_verbose_mode(&args) {
+    if is_debug_mode(&args) {
         println!("JSON: {}", &json);
     }
 
     let resp = post_message(&webhook_url, &json).unwrap_or_else(|e| e.exit());
-    if is_verbose_mode(&args) {
+    if is_debug_mode(&args) {
         println!("Url: {:?}", resp.url().as_str());
         println!("Status: {:?}", resp.status());
     }
@@ -84,13 +103,13 @@ fn post_message(url: &str, json: &str) -> Result<reqwest::Response, Error> {
             } else {
                 Err(
                     Error::Argv(
-                        format!("Failed to request to Slack. StatusCode: {}", res.status())
+                        format!("Failed to post to Slack. StatusCode: {}", res.status())
                     )
                 )
             }
         },
         Err(err) => Err(
-            Error::Deserialize(format!("Failed to request to Slack. Error: {}", err))
+            Error::Deserialize(format!("Failed to post to Slack. Error: {}", err))
         )
     }
 }
@@ -104,7 +123,7 @@ fn get_username(args: &docopt::ArgvMap) -> Result<String, Error> {
 }
 
 fn get_icon_emoji(args: &docopt::ArgvMap) -> Result<String, Error> {
-    let regexp = Regex::new(r":[a-z0-9\-_]+:").unwrap();
+    let regexp = Regex::new(r"\A:[a-z0-9\-_]+:\z").unwrap();
     match args.get_str("-i").trim() {
         icon if icon.is_empty() => Ok(DEFAULT_ICON_EMOJI.to_string()),
         icon if regexp.is_match(icon) => Ok(icon.to_string()),
@@ -140,6 +159,19 @@ fn get_message(args: &docopt::ArgvMap) -> Result<String, Error> {
     }
 }
 
-fn is_verbose_mode(args: &docopt::ArgvMap) -> bool {
-    args.get_bool("-v")
+fn is_debug_mode(args: &docopt::ArgvMap) -> bool {
+    args.get_bool("--debug")
+}
+
+fn get_webhook_url() -> Result<String, Error> {
+    let regexp = Regex::new(r"\Ahttps://hooks.slack.com/([a-zA-Z0-9]+/?){1,}\z").unwrap();
+    match std::env::var("SLACK_WEBHOOK_URL") {
+        Ok(url) => {
+            match &url {
+                url if regexp.is_match(url) => Ok(url.to_string()),
+                _ => Err(Error::Argv("SLACK_WEBHOOK_URL is invalid URL.".to_string()))
+            }
+        },
+        _ => Err(Error::Argv("SLACK_WEBHOOK_URL is not set.".to_string()))
+    }
 }
