@@ -21,6 +21,7 @@ Usage:
     slacks [-u <username>] [-i <icon_emoji>] [-c <channel>] [-v] -
     slacks [-u <username>] [-i <icon_emoji>] [-c <channel>] [-v] <message>
     slacks -h | --help
+    slacks --version
 
 Options:
     -h, --help          Show this message.
@@ -28,6 +29,7 @@ Options:
     -i <icon_emoji>     Icon emoji (default: :robot_face:)
     -c <channel>        Channel name (default: #general)
     -v                  Verbose Mode
+    --version           Show version.
     -                   Read from STDIN
 ";
 
@@ -46,6 +48,13 @@ fn main() {
 
     if args.get_bool("-h") || args.get_bool("--help") {
         let err = Error::Help;
+        err.exit();
+    }
+
+    if args.get_bool("--version") {
+        let err = Error::Usage(
+            format!("{} v{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"))
+        );
         err.exit();
     }
 
