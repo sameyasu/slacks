@@ -120,7 +120,7 @@ fn get_username(args: &docopt::ArgvMap) -> Result<String, Error> {
 }
 
 fn get_icon_emoji(args: &docopt::ArgvMap) -> Result<String, Error> {
-    let regexp = Regex::new(r":[a-z0-9\-_]+:").unwrap();
+    let regexp = Regex::new(r"\A:[a-z0-9\-_]+:\z").unwrap();
     match args.get_str("-i").trim() {
         icon if icon.is_empty() => Ok(DEFAULT_ICON_EMOJI.to_string()),
         icon if regexp.is_match(icon) => Ok(icon.to_string()),
