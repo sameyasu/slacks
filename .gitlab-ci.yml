@@ -1,0 +1,37 @@
+image: docker:stable
+
+services:
+    - docker:dind
+
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - .cargo-registry/
+    - target/
+
+before_script:
+
+stages:
+    - build
+    - test
+
+build:
+    stage: build
+    script:
+        - mkdir -p .cargo-registry
+        - docker run --rm -i
+            -w /opt
+            -v $(pwd):/opt
+            -v $(pwd)/.cargo-registry:/usr/local/cargo/registry
+            rust:1.32
+            cargo build --release
+
+test:
+    stage: test
+    script:
+        - docker run --rm -i
+            -w /opt
+            -v $(pwd):/opt
+            -v $(pwd)/.cargo-registry:/usr/local/cargo/registry
+            rust:1.32
+            cargo test --release
