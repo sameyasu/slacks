@@ -175,3 +175,55 @@ fn get_webhook_url() -> Result<String, Error> {
         _ => Err(Error::Argv("SLACK_WEBHOOK_URL is not set.".to_string()))
     }
 }
+
+#[cfg(test)]
+mod get_username_tests {
+    use super::*;
+
+    #[test]
+    fn default() {
+        let argv = vec!["slacks", "this is a test"].into_iter();
+        let args = Docopt::new(USAGE)
+                    .and_then(|d| d.argv(argv).parse())
+                    .unwrap();
+        assert_eq!(
+            "slacks".to_string(),
+            get_username(&args).unwrap()
+        );
+    }
+
+    #[test]
+    fn set_username() {
+        let argv = vec!["slacks", "-u", "testuser", "this is a test"].into_iter();
+        let args = Docopt::new(USAGE)
+                    .and_then(|d| d.argv(argv).parse())
+                    .unwrap();
+        assert_eq!(
+            "testuser".to_string(),
+            get_username(&args).unwrap()
+        );
+    }
+
+    #[test]
+    fn empty() {
+        let argv = vec!["slacks", "-u", "", "this is a test"].into_iter();
+        let args = Docopt::new(USAGE)
+                    .and_then(|d| d.argv(argv).parse())
+                    .unwrap();
+        assert_eq!(
+            "slacks".to_string(),
+            get_username(&args).unwrap()
+        );
+    }
+
+    #[test]
+    fn over_20chars() {
+        let argv = vec!["slacks", "-u", "012345678901234567890", "this is a test"].into_iter();
+        let args = Docopt::new(USAGE)
+                    .and_then(|d| d.argv(argv).parse())
+                    .unwrap();
+        assert!(
+            get_username(&args).is_err()
+        );
+    }
+}
