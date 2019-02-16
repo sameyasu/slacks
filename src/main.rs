@@ -227,3 +227,55 @@ mod get_username_tests {
         );
     }
 }
+
+#[cfg(test)]
+mod get_channel_tests {
+    use super::*;
+
+    #[test]
+    fn default() {
+        let argv = vec!["slacks", "this is a test"].into_iter();
+        let args = Docopt::new(USAGE)
+                    .and_then(|d| d.argv(argv).parse())
+                    .unwrap();
+        assert_eq!(
+            "#general".to_string(),
+            get_channel(&args).unwrap()
+        );
+    }
+
+    #[test]
+    fn set_channel() {
+        let argv = vec!["slacks", "-c", "#public-channel", "this is a test"].into_iter();
+        let args = Docopt::new(USAGE)
+                    .and_then(|d| d.argv(argv).parse())
+                    .unwrap();
+        assert_eq!(
+            "#public-channel".to_string(),
+            get_channel(&args).unwrap()
+        );
+    }
+
+    #[test]
+    fn empty() {
+        let argv = vec!["slacks", "-c", "", "this is a test"].into_iter();
+        let args = Docopt::new(USAGE)
+                    .and_then(|d| d.argv(argv).parse())
+                    .unwrap();
+        assert_eq!(
+            "#general".to_string(),
+            get_channel(&args).unwrap()
+        );
+    }
+
+    #[test]
+    fn over_20chars() {
+        let argv = vec!["slacks", "-c", "012345678901234567890", "this is a test"].into_iter();
+        let args = Docopt::new(USAGE)
+                    .and_then(|d| d.argv(argv).parse())
+                    .unwrap();
+        assert!(
+            get_channel(&args).is_err()
+        );
+    }
+}
