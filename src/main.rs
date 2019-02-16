@@ -343,3 +343,62 @@ mod get_icon_emoji_tests {
         );
     }
 }
+
+#[cfg(test)]
+mod get_message_tests {
+    use super::*;
+
+    #[test]
+    #[should_panic(expected="WithProgramUsage")]
+    fn no_args() {
+        let argv = vec!["slacks"].into_iter();
+        let _ = Docopt::new(USAGE)
+                    .and_then(|d| d.argv(argv).parse())
+                    .unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected="WithProgramUsage")]
+    fn not_specified_message() {
+        let argv = vec!["slacks", "-c", "#test-channel"].into_iter();
+        let _ = Docopt::new(USAGE)
+                    .and_then(|d| d.argv(argv).parse())
+                    .unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected="Empty message")]
+    fn empty() {
+        let argv = vec!["slacks", "-c", "#test-channel", ""].into_iter();
+        let args = Docopt::new(USAGE)
+                    .and_then(|d| d.argv(argv).parse())
+                    .unwrap();
+        get_message(&args).unwrap();
+    }
+
+    #[test]
+    fn ok() {
+        let argv = vec!["slacks", "this is a test"].into_iter();
+        let args = Docopt::new(USAGE)
+                    .and_then(|d| d.argv(argv).parse())
+                    .unwrap();
+        assert_eq!(
+            "this is a test",
+            get_message(&args).unwrap()
+        );
+    }
+
+    #[test]
+    #[ignore]
+    // echo -n "this is a test from stdin" | cargo test -- --ignored
+    fn read_from_stdin() {
+        let argv = vec!["slacks", "-"].into_iter();
+        let args = Docopt::new(USAGE)
+                    .and_then(|d| d.argv(argv).parse())
+                    .unwrap();
+        assert_eq!(
+            "this is a test from stdin",
+            get_message(&args).unwrap()
+        );
+    }
+}
