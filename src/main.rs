@@ -279,3 +279,67 @@ mod get_channel_tests {
         );
     }
 }
+
+#[cfg(test)]
+mod get_icon_emoji_tests {
+    use super::*;
+
+    #[test]
+    fn default() {
+        let argv = vec!["slacks", "this is a test"].into_iter();
+        let args = Docopt::new(USAGE)
+                    .and_then(|d| d.argv(argv).parse())
+                    .unwrap();
+        assert_eq!(
+            ":slack:".to_string(),
+            get_icon_emoji(&args).unwrap()
+        );
+    }
+
+    #[test]
+    fn set_icon_emoji_ok_hand() {
+        let argv = vec!["slacks", "-i", ":ok_hand:", "this is a test"].into_iter();
+        let args = Docopt::new(USAGE)
+                    .and_then(|d| d.argv(argv).parse())
+                    .unwrap();
+        assert_eq!(
+            ":ok_hand:".to_string(),
+            get_icon_emoji(&args).unwrap()
+        );
+    }
+
+    #[test]
+    fn set_icon_emoji_plus1() {
+        let argv = vec!["slacks", "-i", ":+1:", "this is a test"].into_iter();
+        let args = Docopt::new(USAGE)
+                    .and_then(|d| d.argv(argv).parse())
+                    .unwrap();
+        assert_eq!(
+            ":+1:".to_string(),
+            get_icon_emoji(&args).unwrap()
+        );
+    }
+
+    #[test]
+    fn empty() {
+        let argv = vec!["slacks", "-i", "", "this is a test"].into_iter();
+        let args = Docopt::new(USAGE)
+                    .and_then(|d| d.argv(argv).parse())
+                    .unwrap();
+        assert_eq!(
+            ":slack:".to_string(),
+            get_icon_emoji(&args).unwrap()
+        );
+    }
+
+    #[test]
+    fn invalid_chars() {
+        let argv = vec!["slacks", "-i", "robot_face", "this is a test"].into_iter();
+        let args = Docopt::new(USAGE)
+                    .and_then(|d| d.argv(argv).parse())
+                    .unwrap();
+        assert!(
+            get_icon_emoji(&args).is_err()
+        );
+    }
+}
