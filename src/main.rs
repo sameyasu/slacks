@@ -217,14 +217,13 @@ mod get_username_tests {
     }
 
     #[test]
+    #[should_panic(expected="username is too long")]
     fn over_20chars() {
         let argv = vec!["slacks", "-u", "012345678901234567890", "this is a test"].into_iter();
         let args = Docopt::new(USAGE)
                     .and_then(|d| d.argv(argv).parse())
                     .unwrap();
-        assert!(
-            get_username(&args).is_err()
-        );
+        get_username(&args).unwrap();
     }
 }
 
@@ -269,14 +268,13 @@ mod get_channel_tests {
     }
 
     #[test]
+    #[should_panic(expected="channel is too long")]
     fn over_20chars() {
         let argv = vec!["slacks", "-c", "012345678901234567890", "this is a test"].into_iter();
         let args = Docopt::new(USAGE)
                     .and_then(|d| d.argv(argv).parse())
                     .unwrap();
-        assert!(
-            get_channel(&args).is_err()
-        );
+        get_channel(&args).unwrap();
     }
 }
 
