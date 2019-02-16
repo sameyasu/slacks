@@ -26,7 +26,7 @@ Usage:
 Options:
     -                   Read message text from STDIN.
     -u <username>       Set username. (default: slacks)
-    -i <icon_emoji>     Set icon emoji. (default: :robot_face:)
+    -i <icon_emoji>     Set icon emoji. (default: :slack:)
     -c <channel>        Set posting channel. (default: #general)
     --debug             Show debug messages.
     -h, --help          Show this message.
