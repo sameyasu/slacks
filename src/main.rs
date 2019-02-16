@@ -177,15 +177,24 @@ fn get_webhook_url() -> Result<String, Error> {
 }
 
 #[cfg(test)]
+mod tests {
+    use super::*;
+    use docopt::ArgvMap;
+
+    pub fn parse_argv(argv: Vec<&str>) -> Result<ArgvMap, Error> {
+        let v = argv.into_iter();
+        Docopt::new(USAGE).and_then(|d| d.argv(v).parse())
+    }
+}
+
+#[cfg(test)]
 mod get_username_tests {
     use super::*;
 
     #[test]
     fn default() {
-        let argv = vec!["slacks", "this is a test"].into_iter();
-        let args = Docopt::new(USAGE)
-                    .and_then(|d| d.argv(argv).parse())
-                    .unwrap();
+        let argv = vec!["slacks", "this is a test"];
+        let args = tests::parse_argv(argv).unwrap();
         assert_eq!(
             "slacks".to_string(),
             get_username(&args).unwrap()
@@ -194,10 +203,8 @@ mod get_username_tests {
 
     #[test]
     fn set_username() {
-        let argv = vec!["slacks", "-u", "testuser", "this is a test"].into_iter();
-        let args = Docopt::new(USAGE)
-                    .and_then(|d| d.argv(argv).parse())
-                    .unwrap();
+        let argv = vec!["slacks", "-u", "testuser", "this is a test"];
+        let args = tests::parse_argv(argv).unwrap();
         assert_eq!(
             "testuser".to_string(),
             get_username(&args).unwrap()
@@ -206,10 +213,8 @@ mod get_username_tests {
 
     #[test]
     fn empty() {
-        let argv = vec!["slacks", "-u", "", "this is a test"].into_iter();
-        let args = Docopt::new(USAGE)
-                    .and_then(|d| d.argv(argv).parse())
-                    .unwrap();
+        let argv = vec!["slacks", "-u", "", "this is a test"];
+        let args = tests::parse_argv(argv).unwrap();
         assert_eq!(
             "slacks".to_string(),
             get_username(&args).unwrap()
@@ -219,10 +224,8 @@ mod get_username_tests {
     #[test]
     #[should_panic(expected="username is too long")]
     fn over_20chars() {
-        let argv = vec!["slacks", "-u", "012345678901234567890", "this is a test"].into_iter();
-        let args = Docopt::new(USAGE)
-                    .and_then(|d| d.argv(argv).parse())
-                    .unwrap();
+        let argv = vec!["slacks", "-u", "012345678901234567890", "this is a test"];
+        let args = tests::parse_argv(argv).unwrap();
         get_username(&args).unwrap();
     }
 }
@@ -233,10 +236,8 @@ mod get_channel_tests {
 
     #[test]
     fn default() {
-        let argv = vec!["slacks", "this is a test"].into_iter();
-        let args = Docopt::new(USAGE)
-                    .and_then(|d| d.argv(argv).parse())
-                    .unwrap();
+        let argv = vec!["slacks", "this is a test"];
+        let args = tests::parse_argv(argv).unwrap();
         assert_eq!(
             "#general".to_string(),
             get_channel(&args).unwrap()
@@ -245,10 +246,8 @@ mod get_channel_tests {
 
     #[test]
     fn set_channel() {
-        let argv = vec!["slacks", "-c", "#public-channel", "this is a test"].into_iter();
-        let args = Docopt::new(USAGE)
-                    .and_then(|d| d.argv(argv).parse())
-                    .unwrap();
+        let argv = vec!["slacks", "-c", "#public-channel", "this is a test"];
+        let args = tests::parse_argv(argv).unwrap();
         assert_eq!(
             "#public-channel".to_string(),
             get_channel(&args).unwrap()
@@ -257,10 +256,8 @@ mod get_channel_tests {
 
     #[test]
     fn empty() {
-        let argv = vec!["slacks", "-c", "", "this is a test"].into_iter();
-        let args = Docopt::new(USAGE)
-                    .and_then(|d| d.argv(argv).parse())
-                    .unwrap();
+        let argv = vec!["slacks", "-c", "", "this is a test"];
+        let args = tests::parse_argv(argv).unwrap();
         assert_eq!(
             "#general".to_string(),
             get_channel(&args).unwrap()
@@ -270,10 +267,8 @@ mod get_channel_tests {
     #[test]
     #[should_panic(expected="channel is too long")]
     fn over_20chars() {
-        let argv = vec!["slacks", "-c", "012345678901234567890", "this is a test"].into_iter();
-        let args = Docopt::new(USAGE)
-                    .and_then(|d| d.argv(argv).parse())
-                    .unwrap();
+        let argv = vec!["slacks", "-c", "012345678901234567890", "this is a test"];
+        let args = tests::parse_argv(argv).unwrap();
         get_channel(&args).unwrap();
     }
 }
@@ -284,10 +279,8 @@ mod get_icon_emoji_tests {
 
     #[test]
     fn default() {
-        let argv = vec!["slacks", "this is a test"].into_iter();
-        let args = Docopt::new(USAGE)
-                    .and_then(|d| d.argv(argv).parse())
-                    .unwrap();
+        let argv = vec!["slacks", "this is a test"];
+        let args = tests::parse_argv(argv).unwrap();
         assert_eq!(
             ":slack:".to_string(),
             get_icon_emoji(&args).unwrap()
@@ -296,10 +289,8 @@ mod get_icon_emoji_tests {
 
     #[test]
     fn set_icon_emoji_ok_hand() {
-        let argv = vec!["slacks", "-i", ":ok_hand:", "this is a test"].into_iter();
-        let args = Docopt::new(USAGE)
-                    .and_then(|d| d.argv(argv).parse())
-                    .unwrap();
+        let argv = vec!["slacks", "-i", ":ok_hand:", "this is a test"];
+        let args = tests::parse_argv(argv).unwrap();
         assert_eq!(
             ":ok_hand:".to_string(),
             get_icon_emoji(&args).unwrap()
@@ -308,10 +299,8 @@ mod get_icon_emoji_tests {
 
     #[test]
     fn set_icon_emoji_plus1() {
-        let argv = vec!["slacks", "-i", ":+1:", "this is a test"].into_iter();
-        let args = Docopt::new(USAGE)
-                    .and_then(|d| d.argv(argv).parse())
-                    .unwrap();
+        let argv = vec!["slacks", "-i", ":+1:", "this is a test"];
+        let args = tests::parse_argv(argv).unwrap();
         assert_eq!(
             ":+1:".to_string(),
             get_icon_emoji(&args).unwrap()
@@ -320,10 +309,8 @@ mod get_icon_emoji_tests {
 
     #[test]
     fn empty() {
-        let argv = vec!["slacks", "-i", "", "this is a test"].into_iter();
-        let args = Docopt::new(USAGE)
-                    .and_then(|d| d.argv(argv).parse())
-                    .unwrap();
+        let argv = vec!["slacks", "-i", "", "this is a test"];
+        let args = tests::parse_argv(argv).unwrap();
         assert_eq!(
             ":slack:".to_string(),
             get_icon_emoji(&args).unwrap()
@@ -331,14 +318,11 @@ mod get_icon_emoji_tests {
     }
 
     #[test]
+    #[should_panic(expected="icon_emoji is invalid format.")]
     fn invalid_chars() {
-        let argv = vec!["slacks", "-i", "robot_face", "this is a test"].into_iter();
-        let args = Docopt::new(USAGE)
-                    .and_then(|d| d.argv(argv).parse())
-                    .unwrap();
-        assert!(
-            get_icon_emoji(&args).is_err()
-        );
+        let argv = vec!["slacks", "-i", "robot_face", "this is a test"];
+        let args = tests::parse_argv(argv).unwrap();
+        get_icon_emoji(&args).unwrap();
     }
 }
 
@@ -349,37 +333,29 @@ mod get_message_tests {
     #[test]
     #[should_panic(expected="WithProgramUsage")]
     fn no_args() {
-        let argv = vec!["slacks"].into_iter();
-        let _ = Docopt::new(USAGE)
-                    .and_then(|d| d.argv(argv).parse())
-                    .unwrap();
+        let argv = vec!["slacks"];
+        let _args = tests::parse_argv(argv).unwrap();
     }
 
     #[test]
     #[should_panic(expected="WithProgramUsage")]
     fn not_specified_message() {
-        let argv = vec!["slacks", "-c", "#test-channel"].into_iter();
-        let _ = Docopt::new(USAGE)
-                    .and_then(|d| d.argv(argv).parse())
-                    .unwrap();
+        let argv = vec!["slacks", "-c", "#test-channel"];
+        let _args = tests::parse_argv(argv).unwrap();
     }
 
     #[test]
     #[should_panic(expected="Empty message")]
     fn empty() {
-        let argv = vec!["slacks", "-c", "#test-channel", ""].into_iter();
-        let args = Docopt::new(USAGE)
-                    .and_then(|d| d.argv(argv).parse())
-                    .unwrap();
+        let argv = vec!["slacks", "-c", "#test-channel", ""];
+        let args = tests::parse_argv(argv).unwrap();
         get_message(&args).unwrap();
     }
 
     #[test]
     fn ok() {
-        let argv = vec!["slacks", "this is a test"].into_iter();
-        let args = Docopt::new(USAGE)
-                    .and_then(|d| d.argv(argv).parse())
-                    .unwrap();
+        let argv = vec!["slacks", "this is a test"];
+        let args = tests::parse_argv(argv).unwrap();
         assert_eq!(
             "this is a test",
             get_message(&args).unwrap()
@@ -390,10 +366,8 @@ mod get_message_tests {
     #[ignore]
     // echo -n "this is a test from stdin" | cargo test -- --ignored
     fn read_from_stdin() {
-        let argv = vec!["slacks", "-"].into_iter();
-        let args = Docopt::new(USAGE)
-                    .and_then(|d| d.argv(argv).parse())
-                    .unwrap();
+        let argv = vec!["slacks", "-"];
+        let args = tests::parse_argv(argv).unwrap();
         assert_eq!(
             "this is a test from stdin",
             get_message(&args).unwrap()
