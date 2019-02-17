@@ -26,7 +26,7 @@ Usage:
 Options:
     -                   Read message text from STDIN.
     -u <username>       Set username. (default: slacks)
-    -i <icon_emoji>     Set icon emoji. (default: :robot_face:)
+    -i <icon_emoji>     Set icon emoji. (default: :slack:)
     -c <channel>        Set posting channel. (default: #general)
     --debug             Show debug messages.
     -h, --help          Show this message.
@@ -123,7 +123,7 @@ fn get_username(args: &docopt::ArgvMap) -> Result<String, Error> {
 }
 
 fn get_icon_emoji(args: &docopt::ArgvMap) -> Result<String, Error> {
-    let regexp = Regex::new(r"\A:[a-z0-9\-_]+:\z").unwrap();
+    let regexp = Regex::new(r"\A:[a-z0-9\-_\+]+:\z").unwrap();
     match args.get_str("-i").trim() {
         icon if icon.is_empty() => Ok(DEFAULT_ICON_EMOJI.to_string()),
         icon if regexp.is_match(icon) => Ok(icon.to_string()),
@@ -173,5 +173,215 @@ fn get_webhook_url() -> Result<String, Error> {
             }
         },
         _ => Err(Error::Argv("SLACK_WEBHOOK_URL is not set.".to_string()))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use docopt::ArgvMap;
+
+    pub fn parse_argv(argv: Vec<&str>) -> Result<ArgvMap, Error> {
+        let v = argv.into_iter();
+        Docopt::new(USAGE).and_then(|d| d.argv(v).parse())
+    }
+}
+
+#[cfg(test)]
+mod get_username_tests {
+    use super::*;
+
+    #[test]
+    fn default() {
+        let argv = vec!["slacks", "this is a test"];
+        let args = tests::parse_argv(argv).unwrap();
+        assert_eq!(
+            "slacks".to_string(),
+            get_username(&args).unwrap()
+        );
+    }
+
+    #[test]
+    fn set_username() {
+        let argv = vec!["slacks", "-u", "testuser", "this is a test"];
+        let args = tests::parse_argv(argv).unwrap();
+        assert_eq!(
+            "testuser".to_string(),
+            get_username(&args).unwrap()
+        );
+    }
+
+    #[test]
+    fn empty() {
+        let argv = vec!["slacks", "-u", "", "this is a test"];
+        let args = tests::parse_argv(argv).unwrap();
+        assert_eq!(
+            "slacks".to_string(),
+            get_username(&args).unwrap()
+        );
+    }
+
+    #[test]
+    #[should_panic(expected="username is too long")]
+    fn over_20chars() {
+        let argv = vec!["slacks", "-u", "012345678901234567890", "this is a test"];
+        let args = tests::parse_argv(argv).unwrap();
+        get_username(&args).unwrap();
+    }
+}
+
+#[cfg(test)]
+mod get_channel_tests {
+    use super::*;
+
+    #[test]
+    fn default() {
+        let argv = vec!["slacks", "this is a test"];
+        let args = tests::parse_argv(argv).unwrap();
+        assert_eq!(
+            "#general".to_string(),
+            get_channel(&args).unwrap()
+        );
+    }
+
+    #[test]
+    fn set_channel() {
+        let argv = vec!["slacks", "-c", "#public-channel", "this is a test"];
+        let args = tests::parse_argv(argv).unwrap();
+        assert_eq!(
+            "#public-channel".to_string(),
+            get_channel(&args).unwrap()
+        );
+    }
+
+    #[test]
+    fn empty() {
+        let argv = vec!["slacks", "-c", "", "this is a test"];
+        let args = tests::parse_argv(argv).unwrap();
+        assert_eq!(
+            "#general".to_string(),
+            get_channel(&args).unwrap()
+        );
+    }
+
+    #[test]
+    #[should_panic(expected="channel is too long")]
+    fn over_20chars() {
+        let argv = vec!["slacks", "-c", "012345678901234567890", "this is a test"];
+        let args = tests::parse_argv(argv).unwrap();
+        get_channel(&args).unwrap();
+    }
+}
+
+#[cfg(test)]
+mod get_icon_emoji_tests {
+    use super::*;
+
+    #[test]
+    fn default() {
+        let argv = vec!["slacks", "this is a test"];
+        let args = tests::parse_argv(argv).unwrap();
+        assert_eq!(
+            ":slack:".to_string(),
+            get_icon_emoji(&args).unwrap()
+        );
+    }
+
+    #[test]
+    fn set_icon_emoji_ok_hand() {
+        let argv = vec!["slacks", "-i", ":ok_hand:", "this is a test"];
+        let args = tests::parse_argv(argv).unwrap();
+        assert_eq!(
+            ":ok_hand:".to_string(),
+            get_icon_emoji(&args).unwrap()
+        );
+    }
+
+    #[test]
+    fn set_icon_emoji_plus1() {
+        let argv = vec!["slacks", "-i", ":+1:", "this is a test"];
+        let args = tests::parse_argv(argv).unwrap();
+        assert_eq!(
+            ":+1:".to_string(),
+            get_icon_emoji(&args).unwrap()
+        );
+    }
+
+    #[test]
+    fn empty() {
+        let argv = vec!["slacks", "-i", "", "this is a test"];
+        let args = tests::parse_argv(argv).unwrap();
+        assert_eq!(
+            ":slack:".to_string(),
+            get_icon_emoji(&args).unwrap()
+        );
+    }
+
+    #[test]
+    #[should_panic(expected="icon_emoji is invalid format.")]
+    fn invalid_chars() {
+        let argv = vec!["slacks", "-i", "robot_face", "this is a test"];
+        let args = tests::parse_argv(argv).unwrap();
+        get_icon_emoji(&args).unwrap();
+    }
+}
+
+#[cfg(test)]
+mod get_message_tests {
+    use super::*;
+
+    #[test]
+    #[should_panic(expected="WithProgramUsage")]
+    fn no_args() {
+        let argv = vec!["slacks"];
+        let _args = tests::parse_argv(argv).unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected="WithProgramUsage")]
+    fn not_specified_message() {
+        let argv = vec!["slacks", "-c", "#test-channel"];
+        let _args = tests::parse_argv(argv).unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected="Empty message")]
+    fn empty() {
+        let argv = vec!["slacks", "-c", "#test-channel", ""];
+        let args = tests::parse_argv(argv).unwrap();
+        get_message(&args).unwrap();
+    }
+
+    #[test]
+    fn ok() {
+        let argv = vec!["slacks", "this is a test"];
+        let args = tests::parse_argv(argv).unwrap();
+        assert_eq!(
+            "this is a test",
+            get_message(&args).unwrap()
+        );
+    }
+
+    #[test]
+    #[ignore]
+    // echo -n "this is a test from stdin" | cargo test -- --ignored
+    fn read_from_stdin() {
+        let argv = vec!["slacks", "-"];
+        let args = tests::parse_argv(argv).unwrap();
+        assert_eq!(
+            "this is a test from stdin",
+            get_message(&args).unwrap()
+        );
+    }
+}
+
+#[cfg(test)]
+mod get_webhook_url_tests {
+    use super::*;
+
+    #[test]
+    #[should_panic(expected="SLACK_WEBHOOK_URL is not set.")]
+    fn not_set_env() {
+        get_webhook_url().unwrap();
     }
 }
