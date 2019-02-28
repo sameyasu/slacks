@@ -6,11 +6,13 @@ extern crate reqwest;
 extern crate docopt;
 extern crate regex;
 
-use std::io::{self, Read};
+use std::fs::File;
+use std::io::{self, Read, BufReader};
 use std::time::Duration;
 use docopt::{Docopt, Error};
 use regex::Regex;
 
+const DEFAULT_CONFIG_PATH: &'static str = "/.config/slacks.json";
 const DEFAULT_USERNAME: &'static str = "slacks";
 const DEFAULT_ICON_EMOJI: &'static str = ":slack:";
 const DEFAULT_CHANNEL: &'static str = "#general";
@@ -45,6 +47,11 @@ struct Payload {
     text: String
 }
 
+#[derive(Serialize,Deserialize,Debug)]
+struct DefaultConfig {
+    webhook_url: String,
+}
+
 fn main() {
     let args = Docopt::new(USAGE)
                     .and_then(|d| d.parse())
@@ -62,7 +69,15 @@ fn main() {
         err.exit();
     }
 
-    let webhook_url = get_webhook_url().unwrap_or_else(|e| e.exit());
+    let default = get_default_config();
+    if is_debug_mode(&args) {
+        println!("DefaultConfig: {:?}", default);
+    }
+
+    let webhook_url = match &default.webhook_url {
+        url if url.is_empty() => get_webhook_url().unwrap_or_else(|e| e.exit()),
+        url => url.to_string()
+    };
 
     if is_debug_mode(&args) {
         println!("Args: {:?}", args);
@@ -88,6 +103,31 @@ fn main() {
         println!("Url: {:?}", resp.url().as_str());
         println!("Status: {:?}", resp.status());
     }
+}
+
+fn get_default_config() -> DefaultConfig {
+    match read_config_file(get_config_path()) {
+        Ok(c) => c,
+        Err(_) => {
+            DefaultConfig {
+                webhook_url: "".to_string()
+            }
+        }
+    }
+}
+
+fn get_config_path() -> String {
+    match std::env::var("HOME") {
+        Ok(home) => format!("{}{}", home, DEFAULT_CONFIG_PATH).to_string(),
+        Err(_) => DEFAULT_CONFIG_PATH.to_string(),
+    }
+}
+
+fn read_config_file(path: String) -> Result<DefaultConfig, io::Error> {
+    let file = File::open(path)?;
+    let buf_reader = BufReader::new(file);
+    let setting = serde_json::de::from_reader(buf_reader)?;
+    Ok(setting)
 }
 
 fn post_message(url: &str, json: &str) -> Result<reqwest::Response, Error> {
