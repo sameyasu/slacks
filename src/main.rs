@@ -48,8 +48,14 @@ struct Payload {
 }
 
 #[derive(Serialize,Deserialize,Debug)]
-struct Configs {
+struct ConfigFile {
     webhook_url: String
+}
+
+#[derive(Serialize,Deserialize,Debug)]
+struct Configs {
+    webhook_url: String,
+    debug_mode: bool
 }
 
 fn main() {
@@ -69,17 +75,17 @@ fn main() {
         err.exit();
     }
 
-    let default = get_default_configs();
-    if is_debug_mode(&args) {
-        println!("Configs: {:?}", default);
+    let configs = get_configs(is_debug_mode(&args));
+    if configs.debug_mode {
+        println!("Configs: {:?}", configs);
     }
 
-    let webhook_url = match &default.webhook_url {
+    let webhook_url = match &configs.webhook_url {
         url if url.is_empty() => get_webhook_url().unwrap_or_else(|e| e.exit()),
         url => url.to_string()
     };
 
-    if is_debug_mode(&args) {
+    if configs.debug_mode {
         println!("Args: {:?}", args);
     }
 
@@ -89,12 +95,12 @@ fn main() {
         icon_emoji: get_icon_emoji(&args).unwrap_or_else(|e| e.exit()),
         text: get_message(&args).unwrap_or_else(|e| e.exit())
     };
-    if is_debug_mode(&args) {
+    if configs.debug_mode {
         println!("Payload: {:?}", payload);
     }
 
     let json = serde_json::to_string(&payload).unwrap();
-    if is_debug_mode(&args) {
+    if configs.debug_mode {
         println!("JSON: {}", &json);
     }
 
@@ -105,12 +111,18 @@ fn main() {
     }
 }
 
-fn get_default_configs() -> Configs {
+fn get_configs(is_debug_mode: bool) -> Configs {
     match read_config_file(get_config_path()) {
-        Ok(c) => c,
+        Ok(c) => {
+            Configs {
+                webhook_url: c.webhook_url,
+                debug_mode: is_debug_mode
+            }
+        },
         Err(_) => {
             Configs {
-                webhook_url: "".to_string()
+                webhook_url: "".to_string(),
+                debug_mode: is_debug_mode
             }
         }
     }
@@ -123,7 +135,7 @@ fn get_config_path() -> String {
     }
 }
 
-fn read_config_file(path: String) -> Result<Configs, io::Error> {
+fn read_config_file(path: String) -> Result<ConfigFile, io::Error> {
     let file = File::open(path)?;
     let buf_reader = BufReader::new(file);
     let setting = serde_json::de::from_reader(buf_reader)?;
