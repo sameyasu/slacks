@@ -48,8 +48,8 @@ struct Payload {
 }
 
 #[derive(Serialize,Deserialize,Debug)]
-struct DefaultConfig {
-    webhook_url: String,
+struct Configs {
+    webhook_url: String
 }
 
 fn main() {
@@ -69,9 +69,9 @@ fn main() {
         err.exit();
     }
 
-    let default = get_default_config();
+    let default = get_default_configs();
     if is_debug_mode(&args) {
-        println!("DefaultConfig: {:?}", default);
+        println!("Configs: {:?}", default);
     }
 
     let webhook_url = match &default.webhook_url {
@@ -105,11 +105,11 @@ fn main() {
     }
 }
 
-fn get_default_config() -> DefaultConfig {
+fn get_default_configs() -> Configs {
     match read_config_file(get_config_path()) {
         Ok(c) => c,
         Err(_) => {
-            DefaultConfig {
+            Configs {
                 webhook_url: "".to_string()
             }
         }
@@ -123,7 +123,7 @@ fn get_config_path() -> String {
     }
 }
 
-fn read_config_file(path: String) -> Result<DefaultConfig, io::Error> {
+fn read_config_file(path: String) -> Result<Configs, io::Error> {
     let file = File::open(path)?;
     let buf_reader = BufReader::new(file);
     let setting = serde_json::de::from_reader(buf_reader)?;
