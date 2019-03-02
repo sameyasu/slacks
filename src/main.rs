@@ -78,16 +78,11 @@ fn main() {
     let configs = get_configs(is_debug_mode(&args));
     if configs.debug_mode {
         println!("Configs: {:?}", configs);
-    }
-
-    let webhook_url = match &configs.webhook_url {
-        url if url.is_empty() => get_webhook_url().unwrap_or_else(|e| e.exit()),
-        url => url.to_string()
-    };
-
-    if configs.debug_mode {
         println!("Args: {:?}", args);
     }
+
+    validate_webhook_url(&configs.webhook_url)
+        .unwrap_or_else(|e| e.exit());
 
     let payload = Payload {
         channel: get_channel(&args).unwrap_or_else(|e| e.exit()),
@@ -104,7 +99,7 @@ fn main() {
         println!("JSON: {}", &json);
     }
 
-    let resp = post_message(&webhook_url, &json).unwrap_or_else(|e| e.exit());
+    let resp = post_message(&configs.webhook_url, &json).unwrap_or_else(|e| e.exit());
     if is_debug_mode(&args) {
         println!("Url: {:?}", resp.url().as_str());
         println!("Status: {:?}", resp.status());
@@ -115,7 +110,11 @@ fn get_configs(is_debug_mode: bool) -> Configs {
     match load_config_file(get_config_path()) {
         Ok(c) => {
             Configs {
-                webhook_url: c.webhook_url,
+                webhook_url: match &c.webhook_url {
+                    url if url.is_empty() =>
+                        std::env::var("SLACK_WEBHOOK_URL").unwrap_or("".to_string()),
+                    url => url.to_string()
+                },
                 debug_mode: is_debug_mode
             }
         },
@@ -124,7 +123,11 @@ fn get_configs(is_debug_mode: bool) -> Configs {
                 println!("Failed to load config file. Causes: {}", e);
             }
             Configs {
-                webhook_url: "".to_string(),
+                webhook_url: std::env::var("SLACK_WEBHOOK_URL")
+                    .unwrap_or_else(|_| {
+                        let err = Error::Argv("SLACK_WEBHOOK_URL is not set.".to_string());
+                        err.exit();
+                    }),
                 debug_mode: is_debug_mode
             }
         }
@@ -221,16 +224,12 @@ fn is_debug_mode(args: &docopt::ArgvMap) -> bool {
     args.get_bool("--debug")
 }
 
-fn get_webhook_url() -> Result<String, Error> {
+fn validate_webhook_url(url: &str) -> Result<(), Error> {
     let regexp = Regex::new(r"\Ahttps://hooks.slack.com/([a-zA-Z0-9]+/?){1,}\z").unwrap();
-    match std::env::var("SLACK_WEBHOOK_URL") {
-        Ok(url) => {
-            match &url {
-                url if regexp.is_match(url) => Ok(url.to_string()),
-                _ => Err(Error::Argv("SLACK_WEBHOOK_URL is invalid URL.".to_string()))
-            }
-        },
-        _ => Err(Error::Argv("SLACK_WEBHOOK_URL is not set.".to_string()))
+    match url {
+        u if u.is_empty() => Err(Error::Argv("webhook_url is not set.".to_string())),
+        u if regexp.is_match(u) => Ok(()),
+        _ => Err(Error::Argv("webhook_url is invalid format.".to_string()))
     }
 }
 
