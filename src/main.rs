@@ -112,14 +112,17 @@ fn main() {
 }
 
 fn get_configs(is_debug_mode: bool) -> Configs {
-    match read_config_file(get_config_path()) {
+    match load_config_file(get_config_path()) {
         Ok(c) => {
             Configs {
                 webhook_url: c.webhook_url,
                 debug_mode: is_debug_mode
             }
         },
-        Err(_) => {
+        Err(e) => {
+            if is_debug_mode {
+                println!("Failed to load config file. Causes: {}", e);
+            }
             Configs {
                 webhook_url: "".to_string(),
                 debug_mode: is_debug_mode
@@ -135,11 +138,14 @@ fn get_config_path() -> String {
     }
 }
 
-fn read_config_file(path: String) -> Result<ConfigFile, io::Error> {
-    let file = File::open(path)?;
-    let buf_reader = BufReader::new(file);
-    let setting = serde_json::de::from_reader(buf_reader)?;
-    Ok(setting)
+fn load_config_file(path: String) -> Result<ConfigFile, String> {
+    File::open(path)
+        .map_err(|e| e.to_string())
+        .and_then(|file|
+            serde_json::de::from_reader(BufReader::new(file))
+                .map_err(|e| e.to_string())
+                .and_then(|c| Ok(c))
+        )
 }
 
 fn post_message(url: &str, json: &str) -> Result<reqwest::Response, Error> {
