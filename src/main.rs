@@ -431,3 +431,26 @@ mod get_message_tests {
         );
     }
 }
+
+#[cfg(test)]
+mod validate_webhook_url_tests {
+    use super::*;
+
+    #[test]
+    #[should_panic(expected="webhook_url is not set.")]
+    fn empty() {
+        let _res = validate_webhook_url("").unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected="webhook_url is invalid format.")]
+    fn invalid_url() {
+        let _res = validate_webhook_url("https://this.is.an.invalid.url/").unwrap();
+    }
+
+    #[test]
+    fn valid_url() {
+        let res = validate_webhook_url("https://hooks.slack.com/TEST/valid");
+        assert!(res.is_ok());
+    }
+}
