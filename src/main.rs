@@ -431,14 +431,3 @@ mod get_message_tests {
         );
     }
 }
-
-#[cfg(test)]
-mod get_webhook_url_tests {
-    use super::*;
-
-    #[test]
-    #[should_panic(expected="SLACK_WEBHOOK_URL is not set.")]
-    fn not_set_env() {
-        get_webhook_url().unwrap();
-    }
-}
