@@ -7,7 +7,7 @@ extern crate docopt;
 extern crate regex;
 
 use std::fs::File;
-use std::io::{self, Read, BufReader};
+use std::io::{self, Read, Write, BufReader, BufWriter};
 use std::time::Duration;
 use docopt::{Docopt, Error};
 use regex::Regex;
@@ -22,6 +22,7 @@ const USAGE: &'static str = "
 Usage:
     slacks [-u <username>] [-i <icon_emoji>] [-c <channel>] [--debug] -
     slacks [-u <username>] [-i <icon_emoji>] [-c <channel>] [--debug] <message>
+    slacks --configure
     slacks -h | --help
     slacks --version
 
@@ -35,7 +36,7 @@ Options:
     --version           Show version.
 
 Environment Variables:
-    SLACK_WEBHOOK_URL   Incoming Webhook URL. (required)
+    SLACK_WEBHOOK_URL   Incoming Webhook URL. (deprecated)
 
 ";
 
@@ -81,6 +82,11 @@ fn main() {
         println!("Args: {:?}", args);
     }
 
+    if args.get_bool("--configure") {
+        configure(&configs);
+        std::process::exit(0);
+    }
+
     validate_webhook_url(&configs.webhook_url)
         .unwrap_or_else(|e| e.exit());
 
@@ -106,8 +112,32 @@ fn main() {
     }
 }
 
+fn configure(configs: &Configs) {
+    let current_url = configs.webhook_url.to_string();
+    let mut webhook_url = "".to_string();
+    while let Err(_) = validate_webhook_url(&webhook_url) {
+        print!("Please input Slack Webhook URL [{}]> ", current_url);
+        io::stdout().flush().unwrap();
+        webhook_url = read_line().unwrap();
+    }
+
+    let new_configs = Configs {
+        webhook_url: webhook_url,
+        debug_mode: configs.debug_mode
+    };
+    save_config_file(&get_config_path(), &new_configs).unwrap();
+    println!("Configs: {:?}", &new_configs);
+}
+
+fn read_line() -> Result<String, Error> {
+    let mut buffer = String::new();
+    let _ = io::stdin().read_line(&mut buffer)
+        .unwrap_or_else(|_| panic!("Failed to read stdin".to_string()));
+    Ok(buffer.trim().to_string())
+}
+
 fn get_configs(is_debug_mode: bool) -> Configs {
-    match load_config_file(get_config_path()) {
+    match load_config_file(&get_config_path()) {
         Ok(c) => {
             Configs {
                 webhook_url: match &c.webhook_url {
@@ -141,13 +171,23 @@ fn get_config_path() -> String {
     }
 }
 
-fn load_config_file(path: String) -> Result<ConfigFile, String> {
+fn load_config_file(path: &str) -> Result<ConfigFile, String> {
     File::open(path)
         .map_err(|e| e.to_string())
         .and_then(|file|
             serde_json::de::from_reader(BufReader::new(file))
                 .map_err(|e| e.to_string())
                 .and_then(|c| Ok(c))
+        )
+}
+
+fn save_config_file(path: &str, configs: &Configs) -> Result<(), String> {
+    File::create(path)
+        .map_err(|e| e.to_string())
+        .and_then(|file|
+            serde_json::ser::to_writer_pretty(BufWriter::new(file), configs)
+                .map_err(|e| e.to_string())
+                .and_then(|_| Ok(()))
         )
 }
 
