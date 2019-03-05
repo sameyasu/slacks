@@ -66,15 +66,21 @@ fn main() {
         err.exit();
     }
 
-    let conf = config::get_configs(is_debug_mode(&args));
+    if args.get_bool("--configure") {
+        config::configure(is_debug_mode(&args));
+        std::process::exit(0);
+    }
+
+    let conf = config::get_configs(is_debug_mode(&args))
+        .unwrap_or_else(|_| {
+            // for backward compatibility
+            let err = Error::Argv("SLACK_WEBHOOK_URL is not set.".to_string());
+            err.exit();
+        });
+
     if conf.debug_mode {
         println!("Configs: {:?}", conf);
         println!("Args: {:?}", args);
-    }
-
-    if args.get_bool("--configure") {
-        config::configure(&conf);
-        std::process::exit(0);
     }
 
     validate_webhook_url(&conf.webhook_url)
