@@ -6,8 +6,9 @@ extern crate reqwest;
 extern crate docopt;
 extern crate regex;
 
-use std::fs::File;
-use std::io::{self, Read, Write, BufReader, BufWriter};
+mod config;
+
+use std::io::{self, Read};
 use std::time::Duration;
 use docopt::{Docopt, Error};
 use regex::Regex;
@@ -48,17 +49,6 @@ struct Payload {
     text: String
 }
 
-#[derive(Serialize,Deserialize,Debug)]
-struct ConfigFile {
-    webhook_url: String
-}
-
-#[derive(Serialize,Deserialize,Debug)]
-struct Configs {
-    webhook_url: String,
-    debug_mode: bool
-}
-
 fn main() {
     let args = Docopt::new(USAGE)
                     .and_then(|d| d.parse())
@@ -76,18 +66,18 @@ fn main() {
         err.exit();
     }
 
-    let configs = get_configs(is_debug_mode(&args));
-    if configs.debug_mode {
-        println!("Configs: {:?}", configs);
+    let conf = config::get_configs(is_debug_mode(&args));
+    if conf.debug_mode {
+        println!("Configs: {:?}", conf);
         println!("Args: {:?}", args);
     }
 
     if args.get_bool("--configure") {
-        configure(&configs);
+        config::configure(&conf);
         std::process::exit(0);
     }
 
-    validate_webhook_url(&configs.webhook_url)
+    validate_webhook_url(&conf.webhook_url)
         .unwrap_or_else(|e| e.exit());
 
     let payload = Payload {
@@ -96,99 +86,20 @@ fn main() {
         icon_emoji: get_icon_emoji(&args).unwrap_or_else(|e| e.exit()),
         text: get_message(&args).unwrap_or_else(|e| e.exit())
     };
-    if configs.debug_mode {
+    if conf.debug_mode {
         println!("Payload: {:?}", payload);
     }
 
     let json = serde_json::to_string(&payload).unwrap();
-    if configs.debug_mode {
+    if conf.debug_mode {
         println!("JSON: {}", &json);
     }
 
-    let resp = post_message(&configs.webhook_url, &json).unwrap_or_else(|e| e.exit());
+    let resp = post_message(&conf.webhook_url, &json).unwrap_or_else(|e| e.exit());
     if is_debug_mode(&args) {
         println!("Url: {:?}", resp.url().as_str());
         println!("Status: {:?}", resp.status());
     }
-}
-
-fn configure(configs: &Configs) {
-    let current_url = configs.webhook_url.to_string();
-    let mut webhook_url = "".to_string();
-    while let Err(_) = validate_webhook_url(&webhook_url) {
-        print!("Please input Slack Webhook URL [{}]> ", current_url);
-        io::stdout().flush().unwrap();
-        webhook_url = read_line().unwrap();
-    }
-
-    let new_configs = Configs {
-        webhook_url: webhook_url,
-        debug_mode: configs.debug_mode
-    };
-    save_config_file(&get_config_path(), &new_configs).unwrap();
-    println!("Configs: {:?}", &new_configs);
-}
-
-fn read_line() -> Result<String, Error> {
-    let mut buffer = String::new();
-    let _ = io::stdin().read_line(&mut buffer)
-        .unwrap_or_else(|_| panic!("Failed to read stdin".to_string()));
-    Ok(buffer.trim().to_string())
-}
-
-fn get_configs(is_debug_mode: bool) -> Configs {
-    match load_config_file(&get_config_path()) {
-        Ok(c) => {
-            Configs {
-                webhook_url: match &c.webhook_url {
-                    url if url.is_empty() =>
-                        std::env::var("SLACK_WEBHOOK_URL").unwrap_or("".to_string()),
-                    url => url.to_string()
-                },
-                debug_mode: is_debug_mode
-            }
-        },
-        Err(e) => {
-            if is_debug_mode {
-                println!("Failed to load config file. Causes: {}", e);
-            }
-            Configs {
-                webhook_url: std::env::var("SLACK_WEBHOOK_URL")
-                    .unwrap_or_else(|_| {
-                        let err = Error::Argv("SLACK_WEBHOOK_URL is not set.".to_string());
-                        err.exit();
-                    }),
-                debug_mode: is_debug_mode
-            }
-        }
-    }
-}
-
-fn get_config_path() -> String {
-    match std::env::var("HOME") {
-        Ok(home) => format!("{}{}", home, DEFAULT_CONFIG_PATH).to_string(),
-        Err(_) => DEFAULT_CONFIG_PATH.to_string(),
-    }
-}
-
-fn load_config_file(path: &str) -> Result<ConfigFile, String> {
-    File::open(path)
-        .map_err(|e| e.to_string())
-        .and_then(|file|
-            serde_json::de::from_reader(BufReader::new(file))
-                .map_err(|e| e.to_string())
-                .and_then(|c| Ok(c))
-        )
-}
-
-fn save_config_file(path: &str, configs: &Configs) -> Result<(), String> {
-    File::create(path)
-        .map_err(|e| e.to_string())
-        .and_then(|file|
-            serde_json::ser::to_writer_pretty(BufWriter::new(file), configs)
-                .map_err(|e| e.to_string())
-                .and_then(|_| Ok(()))
-        )
 }
 
 fn post_message(url: &str, json: &str) -> Result<reqwest::Response, Error> {
