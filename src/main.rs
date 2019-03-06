@@ -97,7 +97,7 @@ fn main() {
         println!("JSON: {}", &json);
     }
 
-    let resp = post_message(&conf.webhook_url, &json).unwrap_or_else(|e| e.exit());
+    let resp = post_message(&conf.webhook_url.unwrap(), &json).unwrap_or_else(|e| e.exit());
     if is_debug_mode(&args) {
         println!("Url: {:?}", resp.url().as_str());
         println!("Status: {:?}", resp.status());
@@ -177,11 +177,11 @@ fn is_debug_mode(args: &docopt::ArgvMap) -> bool {
     args.get_bool("--debug")
 }
 
-fn validate_webhook_url(url: &str) -> Result<(), Error> {
+fn validate_webhook_url(url: &Option<String>) -> Result<(), Error> {
     let regexp = Regex::new(r"\Ahttps://hooks.slack.com/([a-zA-Z0-9]+/?){1,}\z").unwrap();
     match url {
-        u if u.is_empty() => Err(Error::Argv("webhook_url is not set.".to_string())),
-        u if regexp.is_match(u) => Ok(()),
+        None => Err(Error::Argv("webhook_url is not set.".to_string())),
+        Some(u) if regexp.is_match(u) => Ok(()),
         _ => Err(Error::Argv("webhook_url is invalid format.".to_string()))
     }
 }
@@ -391,19 +391,28 @@ mod validate_webhook_url_tests {
 
     #[test]
     #[should_panic(expected="webhook_url is not set.")]
-    fn empty() {
-        let _res = validate_webhook_url("").unwrap();
+    fn none() {
+        let _res = validate_webhook_url(&None).unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected="webhook_url is invalid format.")]
+    fn empty_str() {
+        let empty = Some("".to_string());
+        let _res = validate_webhook_url(&empty).unwrap();
     }
 
     #[test]
     #[should_panic(expected="webhook_url is invalid format.")]
     fn invalid_url() {
-        let _res = validate_webhook_url("https://this.is.an.invalid.url/").unwrap();
+        let invalid_url = Some("https://this.is.an.invalid.url/".to_string());
+        let _res = validate_webhook_url(&invalid_url).unwrap();
     }
 
     #[test]
     fn valid_url() {
-        let res = validate_webhook_url("https://hooks.slack.com/TEST/valid");
+        let valid_url = Some("https://hooks.slack.com/TEST/valid".to_string());
+        let res = validate_webhook_url(&valid_url);
         assert!(res.is_ok());
     }
 }

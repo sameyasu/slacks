@@ -5,12 +5,11 @@ use std::io::{self, Write, BufReader, BufWriter};
 
 #[derive(Serialize,Deserialize,Debug,Clone)]
 pub struct Configs {
-    pub webhook_url: String,
+    pub webhook_url: Option<String>,
     pub debug_mode: bool
 }
 
 impl Configs {
-
     fn load(&mut self, path: &str) -> Result<(), String> {
         File::open(path)
             .map_err(|e| e.to_string())
@@ -18,7 +17,7 @@ impl Configs {
                 let c : Configs = serde_json::de::from_reader(BufReader::new(file))
                     .map_err(|e| e.to_string())
                     .unwrap();
-
+                // load to self
                 self.clone_from(&c);
                 Ok(())
             })
@@ -37,18 +36,24 @@ impl Configs {
 
 pub fn configure(debug: bool) {
     let mut configs = Configs {
-       webhook_url: "".to_string(),
+       webhook_url: None,
        debug_mode: debug
     };
 
     let _ = configs.load(&get_config_path());
 
-    let current_url = configs.webhook_url.to_string();
-    let mut webhook_url = "".to_string();
-    while let Err(_) = validate_webhook_url(&webhook_url) {
-        print!("Please input Slack Webhook URL [{}]> ", current_url);
+    let current_url = configs.webhook_url;
+    let mut webhook_url = None;
+    while let Err(e) = validate_webhook_url(&webhook_url) {
+        if webhook_url != None {
+            println!("{}", e);
+        }
+        print!("Slack Webhook URL [{}]: ", match &current_url {
+            Some(u) => u,
+            _ => "None"
+        });
         io::stdout().flush().unwrap();
-        webhook_url = read_line().unwrap();
+        webhook_url = Some(read_line().unwrap());
     }
 
     let new_conf = Configs {
@@ -56,12 +61,12 @@ pub fn configure(debug: bool) {
         debug_mode: false // allways false
     };
     new_conf.save(&get_config_path()).unwrap();
-    println!("Config: {:?}", &new_conf);
+    println!("Saved: {:?}", &new_conf);
 }
 
 pub fn get_configs(is_debug_mode: bool) -> Result<Configs, Error> {
     let mut configs = Configs {
-       webhook_url: "".to_string(),
+       webhook_url: None,
        debug_mode: is_debug_mode
     };
 
@@ -80,7 +85,7 @@ pub fn get_configs(is_debug_mode: bool) -> Result<Configs, Error> {
     let _ = std::env::var("SLACK_WEBHOOK_URL")
         .map(|url| {
             // override: backward compatibility
-            configs.webhook_url = url;
+            configs.webhook_url = Some(url);
         });
 
     Ok(configs)
