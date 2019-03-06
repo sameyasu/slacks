@@ -72,11 +72,7 @@ fn main() {
     }
 
     let conf = config::get_configs(is_debug_mode(&args))
-        .unwrap_or_else(|_| {
-            // for backward compatibility
-            let err = Error::Argv("SLACK_WEBHOOK_URL is not set.".to_string());
-            err.exit();
-        });
+        .unwrap_or_else(|e| e.exit());
 
     if conf.debug_mode {
         println!("Configs: {:?}", conf);
