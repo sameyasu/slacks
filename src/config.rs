@@ -64,7 +64,7 @@ pub fn configure(debug: bool) {
     println!("Saved: {:?}", &new_conf);
 }
 
-pub fn get_configs(is_debug_mode: bool) -> Result<Configs, Error> {
+pub fn get_configs(is_debug_mode: bool) -> Configs {
     let mut configs = Configs {
        webhook_url: None,
        debug_mode: is_debug_mode
@@ -75,10 +75,11 @@ pub fn get_configs(is_debug_mode: bool) -> Result<Configs, Error> {
             if is_debug_mode {
                 println!("Failed to load config file. Cause: {}", e);
             }
+            // ignore error
         })
         .map(|()| {
             if is_debug_mode {
-                println!("{:?}", configs);
+                println!("Loaded {:?}", configs);
             }
         });
 
@@ -88,8 +89,7 @@ pub fn get_configs(is_debug_mode: bool) -> Result<Configs, Error> {
             configs.webhook_url = Some(url);
         });
 
-    Ok(configs)
-
+    configs
 }
 
 fn get_config_path() -> String {

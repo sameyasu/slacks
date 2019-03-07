@@ -71,8 +71,7 @@ fn main() {
         std::process::exit(0);
     }
 
-    let conf = config::get_configs(is_debug_mode(&args))
-        .unwrap_or_else(|e| e.exit());
+    let conf = config::get_configs(is_debug_mode(&args));
 
     if conf.debug_mode {
         println!("Configs: {:?}", conf);
