@@ -104,18 +104,21 @@ fn read_line() -> Result<String, Error> {
 }
 
 fn configure_webhook_url(conf: &Configs) -> Option<String> {
-    let current_url = &conf.webhook_url;
+    let current_url = conf.webhook_url.as_ref();
     let mut webhook_url = None;
     while let Err(e) = validate_webhook_url(&webhook_url) {
-        if webhook_url != None {
+        if webhook_url.is_some() {
             println!("{}", e);
         }
         print!("Slack Webhook URL [{}]: ", match current_url {
             Some(u) => u,
-            _ => "None"
+            None => "None"
         });
         io::stdout().flush().unwrap();
-        webhook_url = Some(read_line().unwrap());
+        webhook_url = match &read_line().unwrap() {
+            url if url.is_empty() => Some(current_url.unwrap().to_string()),
+            url => Some(url.to_string())
+        };
     }
     webhook_url
 }
