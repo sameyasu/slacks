@@ -136,12 +136,9 @@ fn get_username(args: &docopt::ArgvMap) -> Result<String, Error> {
 }
 
 fn get_icon_emoji(args: &docopt::ArgvMap) -> Result<String, Error> {
-    let regexp = Regex::new(r"\A:[a-z0-9\-_\+]+:\z").unwrap();
-    match args.get_str("-i").trim() {
-        icon if icon.is_empty() => Ok(DEFAULT_ICON_EMOJI.to_string()),
-        icon if regexp.is_match(icon) => Ok(icon.to_string()),
-        _ => Err(Error::Argv("icon_emoji is invalid format. (e.g. :robot_face:)".to_string()))
-    }
+    let icon_emoji = Some(args.get_str("-i").trim().to_string());
+    validate_icon_emoji(&icon_emoji)?;
+    Ok(icon_emoji.unwrap())
 }
 
 fn get_channel(args: &docopt::ArgvMap) -> Result<String, Error> {
@@ -189,6 +186,16 @@ fn validate_channel(channel: &Option<String>) -> Result<(), Error> {
         Some(channel) if channel.is_empty() => Err(Error::Argv("channel is empty".to_string())),
         Some(channel) if channel.len() > 20 => Err(Error::Argv("channel is too long".to_string())),
         Some(_) => Ok(()),
+    }
+}
+
+fn validate_icon_emoji(icon_emoji: &Option<String>) -> Result<(), Error> {
+    let regexp = Regex::new(r"\A:[a-z0-9\-_\+]+:\z").unwrap();
+    match icon_emoji {
+        None => Err(Error::Argv("icon_emoji is not set.".to_string())),
+        Some(icon) if icon.is_empty() => Err(Error::Argv("icon_emoji is empty.".to_string())),
+        Some(icon) if regexp.is_match(icon) => Ok(()),
+        _ => Err(Error::Argv("icon_emoji is invalid format. (e.g. :robot_face:)".to_string()))
     }
 }
 
@@ -285,16 +292,6 @@ mod get_icon_emoji_tests {
     use super::*;
 
     #[test]
-    fn default() {
-        let argv = vec!["slacks", "this is a test"];
-        let args = tests::parse_argv(argv).unwrap();
-        assert_eq!(
-            ":slack:".to_string(),
-            get_icon_emoji(&args).unwrap()
-        );
-    }
-
-    #[test]
     fn set_icon_emoji_ok_hand() {
         let argv = vec!["slacks", "-i", ":ok_hand:", "this is a test"];
         let args = tests::parse_argv(argv).unwrap();
@@ -315,6 +312,7 @@ mod get_icon_emoji_tests {
     }
 
     #[test]
+    #[should_panic(expected="icon_emoji is empty.")]
     fn empty() {
         let argv = vec!["slacks", "-i", "", "this is a test"];
         let args = tests::parse_argv(argv).unwrap();

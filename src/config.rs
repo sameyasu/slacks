@@ -52,7 +52,7 @@ pub fn configure(debug: bool) {
         webhook_url: configure_var(&configs.webhook_url, "Slack Webhook URL", validate_webhook_url),
         channel: configure_var(&configs.channel, "Slack Channel", validate_channel),
         username: Some(DEFAULT_USERNAME.to_string()),
-        icon_emoji: Some(DEFAULT_ICON_EMOJI.to_string()),
+        icon_emoji: configure_var(&configs.icon_emoji, "Icon Emoji", validate_icon_emoji),
         debug_mode: false // allways false
     };
     new_conf.save(&get_config_path()).unwrap();
@@ -64,7 +64,7 @@ pub fn get_configs(is_debug_mode: bool) -> Configs {
         webhook_url: None,
         channel: Some(DEFAULT_CHANNEL.to_string()),
         username: None,
-        icon_emoji: None,
+        icon_emoji: Some(DEFAULT_ICON_EMOJI.to_string()),
         debug_mode: is_debug_mode
     };
 
