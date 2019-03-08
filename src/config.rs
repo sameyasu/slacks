@@ -6,6 +6,9 @@ use std::io::{self, Write, BufReader, BufWriter};
 #[derive(Serialize,Deserialize,Debug,Clone)]
 pub struct Configs {
     pub webhook_url: Option<String>,
+    pub channel: Option<String>,
+    pub username: Option<String>,
+    pub icon_emoji: Option<String>,
     pub debug_mode: bool
 }
 
@@ -36,28 +39,20 @@ impl Configs {
 
 pub fn configure(debug: bool) {
     let mut configs = Configs {
-       webhook_url: None,
-       debug_mode: debug
+        webhook_url: None,
+        channel: Some(DEFAULT_CHANNEL.to_string()),
+        username: Some(DEFAULT_USERNAME.to_string()),
+        icon_emoji: Some(DEFAULT_ICON_EMOJI.to_string()),
+        debug_mode: debug
     };
 
     let _ = configs.load(&get_config_path());
 
-    let current_url = configs.webhook_url;
-    let mut webhook_url = None;
-    while let Err(e) = validate_webhook_url(&webhook_url) {
-        if webhook_url != None {
-            println!("{}", e);
-        }
-        print!("Slack Webhook URL [{}]: ", match &current_url {
-            Some(u) => u,
-            _ => "None"
-        });
-        io::stdout().flush().unwrap();
-        webhook_url = Some(read_line().unwrap());
-    }
-
     let new_conf = Configs {
-        webhook_url: webhook_url,
+        webhook_url: configure_webhook_url(&configs),
+        channel: None,
+        username: None,
+        icon_emoji: None,
         debug_mode: false // allways false
     };
     new_conf.save(&get_config_path()).unwrap();
@@ -66,8 +61,11 @@ pub fn configure(debug: bool) {
 
 pub fn get_configs(is_debug_mode: bool) -> Configs {
     let mut configs = Configs {
-       webhook_url: None,
-       debug_mode: is_debug_mode
+        webhook_url: None,
+        channel: None,
+        username: None,
+        icon_emoji: None,
+        debug_mode: is_debug_mode
     };
 
     let _ = configs.load(&get_config_path())
@@ -103,4 +101,21 @@ fn read_line() -> Result<String, Error> {
     let _ = io::stdin().read_line(&mut buffer)
         .unwrap_or_else(|_| panic!("Failed to read stdin".to_string()));
     Ok(buffer.trim().to_string())
+}
+
+fn configure_webhook_url(conf: &Configs) -> Option<String> {
+    let current_url = &conf.webhook_url;
+    let mut webhook_url = None;
+    while let Err(e) = validate_webhook_url(&webhook_url) {
+        if webhook_url != None {
+            println!("{}", e);
+        }
+        print!("Slack Webhook URL [{}]: ", match current_url {
+            Some(u) => u,
+            _ => "None"
+        });
+        io::stdout().flush().unwrap();
+        webhook_url = Some(read_line().unwrap());
+    }
+    webhook_url
 }
