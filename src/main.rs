@@ -12,6 +12,7 @@ use std::io::{self, Read};
 use std::time::Duration;
 use docopt::{Docopt, Error};
 use regex::Regex;
+use config::Configs;
 
 const DEFAULT_CONFIG_PATH: &'static str = "/.config/slacks.json";
 const DEFAULT_USERNAME: &'static str = "slacks";
@@ -82,9 +83,9 @@ fn main() {
         .unwrap_or_else(|e| e.exit());
 
     let payload = Payload {
-        channel: get_channel(&args).unwrap_or_else(|e| e.exit()),
-        username: get_username(&args).unwrap_or_else(|e| e.exit()),
-        icon_emoji: get_icon_emoji(&args).unwrap_or_else(|e| e.exit()),
+        channel: get_channel(&args, &conf).unwrap_or_else(|e| e.exit()),
+        username: get_username(&args, &conf).unwrap_or_else(|e| e.exit()),
+        icon_emoji: get_icon_emoji(&args, &conf).unwrap_or_else(|e| e.exit()),
         text: get_message(&args).unwrap_or_else(|e| e.exit())
     };
     if conf.debug_mode {
@@ -127,20 +128,29 @@ fn post_message(url: &str, json: &str) -> Result<reqwest::Response, Error> {
     }
 }
 
-fn get_username(args: &docopt::ArgvMap) -> Result<String, Error> {
-    let username = Some(args.get_str("-u").trim().to_string());
+fn get_username(args: &docopt::ArgvMap, configs: &Configs) -> Result<String, Error> {
+    let username = Some(match args.get_str("-u").trim() {
+        u if u.is_empty() => configs.username.as_ref().unwrap().to_string(),
+        u => u.to_string()
+    });
     validate_username(&username)?;
     Ok(username.unwrap())
 }
 
-fn get_icon_emoji(args: &docopt::ArgvMap) -> Result<String, Error> {
-    let icon_emoji = Some(args.get_str("-i").trim().to_string());
+fn get_icon_emoji(args: &docopt::ArgvMap, configs: &Configs) -> Result<String, Error> {
+    let icon_emoji = Some(match args.get_str("-i").trim() {
+        i if i.is_empty() => configs.icon_emoji.as_ref().unwrap().to_string(),
+        i => i.to_string()
+    });
     validate_icon_emoji(&icon_emoji)?;
     Ok(icon_emoji.unwrap())
 }
 
-fn get_channel(args: &docopt::ArgvMap) -> Result<String, Error> {
-    let channel = Some(args.get_str("-c").trim().to_string());
+fn get_channel(args: &docopt::ArgvMap, configs: &Configs) -> Result<String, Error> {
+    let channel = Some(match args.get_str("-c").trim() {
+        c if c.is_empty() => configs.channel.as_ref().unwrap().to_string(),
+        c => c.to_string()
+    });
     validate_channel(&channel)?;
     Ok(channel.unwrap())
 }
@@ -214,118 +224,6 @@ mod tests {
     pub fn parse_argv(argv: Vec<&str>) -> Result<ArgvMap, Error> {
         let v = argv.into_iter();
         Docopt::new(USAGE).and_then(|d| d.argv(v).parse())
-    }
-}
-
-#[cfg(test)]
-mod get_username_tests {
-    use super::*;
-
-    #[test]
-    fn set_username() {
-        let argv = vec!["slacks", "-u", "testuser", "this is a test"];
-        let args = tests::parse_argv(argv).unwrap();
-        assert_eq!(
-            "testuser".to_string(),
-            get_username(&args).unwrap()
-        );
-    }
-
-    #[test]
-    #[should_panic(expected="username is empty")]
-    fn empty() {
-        let argv = vec!["slacks", "-u", "", "this is a test"];
-        let args = tests::parse_argv(argv).unwrap();
-        assert_eq!(
-            "slacks".to_string(),
-            get_username(&args).unwrap()
-        );
-    }
-
-    #[test]
-    #[should_panic(expected="username is too long")]
-    fn over_20chars() {
-        let argv = vec!["slacks", "-u", "012345678901234567890", "this is a test"];
-        let args = tests::parse_argv(argv).unwrap();
-        get_username(&args).unwrap();
-    }
-}
-
-#[cfg(test)]
-mod get_channel_tests {
-    use super::*;
-
-    #[test]
-    fn set_channel() {
-        let argv = vec!["slacks", "-c", "#public-channel", "this is a test"];
-        let args = tests::parse_argv(argv).unwrap();
-        assert_eq!(
-            "#public-channel".to_string(),
-            get_channel(&args).unwrap()
-        );
-    }
-
-    #[test]
-    #[should_panic(expected="channel is empty")]
-    fn empty() {
-        let argv = vec!["slacks", "-c", "", "this is a test"];
-        let args = tests::parse_argv(argv).unwrap();
-        assert_eq!(
-            "#general".to_string(),
-            get_channel(&args).unwrap()
-        );
-    }
-
-    #[test]
-    #[should_panic(expected="channel is too long")]
-    fn over_20chars() {
-        let argv = vec!["slacks", "-c", "012345678901234567890", "this is a test"];
-        let args = tests::parse_argv(argv).unwrap();
-        get_channel(&args).unwrap();
-    }
-}
-
-#[cfg(test)]
-mod get_icon_emoji_tests {
-    use super::*;
-
-    #[test]
-    fn set_icon_emoji_ok_hand() {
-        let argv = vec!["slacks", "-i", ":ok_hand:", "this is a test"];
-        let args = tests::parse_argv(argv).unwrap();
-        assert_eq!(
-            ":ok_hand:".to_string(),
-            get_icon_emoji(&args).unwrap()
-        );
-    }
-
-    #[test]
-    fn set_icon_emoji_plus1() {
-        let argv = vec!["slacks", "-i", ":+1:", "this is a test"];
-        let args = tests::parse_argv(argv).unwrap();
-        assert_eq!(
-            ":+1:".to_string(),
-            get_icon_emoji(&args).unwrap()
-        );
-    }
-
-    #[test]
-    #[should_panic(expected="icon_emoji is empty.")]
-    fn empty() {
-        let argv = vec!["slacks", "-i", "", "this is a test"];
-        let args = tests::parse_argv(argv).unwrap();
-        assert_eq!(
-            ":slack:".to_string(),
-            get_icon_emoji(&args).unwrap()
-        );
-    }
-
-    #[test]
-    #[should_panic(expected="icon_emoji is invalid format.")]
-    fn invalid_chars() {
-        let argv = vec!["slacks", "-i", "robot_face", "this is a test"];
-        let args = tests::parse_argv(argv).unwrap();
-        get_icon_emoji(&args).unwrap();
     }
 }
 
@@ -406,6 +304,116 @@ mod validate_webhook_url_tests {
     fn valid_url() {
         let valid_url = Some("https://hooks.slack.com/TEST/valid".to_string());
         let res = validate_webhook_url(&valid_url);
+        assert!(res.is_ok());
+    }
+}
+
+#[cfg(test)]
+mod validate_channel_tests {
+    use super::*;
+
+    #[test]
+    #[should_panic(expected="channel is not set")]
+    fn none() {
+        let _res = validate_channel(&None).unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected="channel is empty")]
+    fn empty() {
+        let empty = Some("".to_string());
+        let _res = validate_channel(&empty).unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected="channel is too long")]
+    fn over_20chars() {
+        let long = Some("#12345678901234567890".to_string());
+        let _res = validate_channel(&long).unwrap();
+    }
+
+    #[test]
+    fn valid_public_channel() {
+        let valid = Some("#public-channel".to_string());
+        let res = validate_channel(&valid);
+        assert!(res.is_ok());
+    }
+
+    #[test]
+    fn valid_private_channel() {
+        let valid = Some("private-channel".to_string());
+        let res = validate_channel(&valid);
+        assert!(res.is_ok());
+    }
+
+    #[test]
+    fn valid_direct_message() {
+        let valid = Some("@you".to_string());
+        let res = validate_channel(&valid);
+        assert!(res.is_ok());
+    }
+}
+
+#[cfg(test)]
+mod validate_username_tests {
+    use super::*;
+
+    #[test]
+    #[should_panic(expected="username is not set")]
+    fn none() {
+        let _res = validate_username(&None).unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected="username is empty")]
+    fn empty_str() {
+        let empty = Some("".to_string());
+        let _res = validate_username(&empty).unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected="username is too long")]
+    fn over_20chars() {
+        let long = Some("012345678901234567890".to_string());
+        let _res = validate_username(&long).unwrap();
+    }
+
+    #[test]
+    fn valid() {
+        let valid = Some("test-user".to_string());
+        let res = validate_username(&valid);
+        assert!(res.is_ok());
+    }
+}
+
+#[cfg(test)]
+mod validate_icon_emoji_tests {
+    use super::*;
+
+    #[test]
+    #[should_panic(expected="icon_emoji is not set.")]
+    fn none() {
+        let _res = validate_icon_emoji(&None).unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected="icon_emoji is invalid format")]
+    fn over_20chars() {
+        let invalid = Some("robot_face".to_string());
+        let _res = validate_icon_emoji(&invalid).unwrap();
+    }
+
+    #[test]
+    fn valid_icon_emoji_ok_hand() {
+        let valid = Some(":ok_hand:".to_string());
+        let res = validate_icon_emoji(&valid);
+        assert!(res.is_ok());
+    }
+
+    #[test]
+    fn set_icon_emoji_plus1() {
+        let valid = Some(":+1:".to_string());
+        let res = validate_icon_emoji(&valid);
         assert!(res.is_ok());
     }
 }
