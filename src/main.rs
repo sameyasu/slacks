@@ -128,11 +128,9 @@ fn post_message(url: &str, json: &str) -> Result<reqwest::Response, Error> {
 }
 
 fn get_username(args: &docopt::ArgvMap) -> Result<String, Error> {
-    match args.get_str("-u").trim() {
-        uname if uname.is_empty() => Ok(DEFAULT_USERNAME.to_string()),
-        uname if uname.len() > 20 => Err(Error::Argv("username is too long".to_string())),
-        uname => Ok(uname.to_string())
-    }
+    let username = Some(args.get_str("-u").trim().to_string());
+    validate_username(&username)?;
+    Ok(username.unwrap())
 }
 
 fn get_icon_emoji(args: &docopt::ArgvMap) -> Result<String, Error> {
@@ -189,6 +187,15 @@ fn validate_channel(channel: &Option<String>) -> Result<(), Error> {
     }
 }
 
+fn validate_username(username: &Option<String>) -> Result<(), Error> {
+    match username {
+        None => Err(Error::Argv("username is not set".to_string())),
+        Some(uname) if uname.is_empty() => Err(Error::Argv("username is empty".to_string())),
+        Some(uname) if uname.len() > 20 => Err(Error::Argv("username is too long".to_string())),
+        Some(_) => Ok(()),
+    }
+}
+
 fn validate_icon_emoji(icon_emoji: &Option<String>) -> Result<(), Error> {
     let regexp = Regex::new(r"\A:[a-z0-9\-_\+]+:\z").unwrap();
     match icon_emoji {
@@ -215,16 +222,6 @@ mod get_username_tests {
     use super::*;
 
     #[test]
-    fn default() {
-        let argv = vec!["slacks", "this is a test"];
-        let args = tests::parse_argv(argv).unwrap();
-        assert_eq!(
-            "slacks".to_string(),
-            get_username(&args).unwrap()
-        );
-    }
-
-    #[test]
     fn set_username() {
         let argv = vec!["slacks", "-u", "testuser", "this is a test"];
         let args = tests::parse_argv(argv).unwrap();
@@ -235,6 +232,7 @@ mod get_username_tests {
     }
 
     #[test]
+    #[should_panic(expected="username is empty")]
     fn empty() {
         let argv = vec!["slacks", "-u", "", "this is a test"];
         let args = tests::parse_argv(argv).unwrap();
