@@ -10,6 +10,7 @@ The easiest way to post to Slack :D
 Usage:
     slacks [-u <username>] [-i <icon_emoji>] [-c <channel>] [--debug] -
     slacks [-u <username>] [-i <icon_emoji>] [-c <channel>] [--debug] <message>
+    slacks --configure
     slacks -h | --help
     slacks --version
 

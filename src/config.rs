@@ -50,9 +50,9 @@ pub fn configure(debug: bool) {
 
     let new_conf = Configs {
         webhook_url: configure_var(&configs.webhook_url, "Slack Webhook URL", validate_webhook_url),
-        channel: configure_var(&configs.channel, "Slack Channel", validate_channel),
-        username: configure_var(&configs.username, "Username", validate_username),
-        icon_emoji: configure_var(&configs.icon_emoji, "Icon Emoji", validate_icon_emoji),
+        channel: configure_var(&configs.channel, "Default Channel", validate_channel),
+        username: configure_var(&configs.username, "Default Username", validate_username),
+        icon_emoji: configure_var(&configs.icon_emoji, "Default Icon Emoji", validate_icon_emoji),
         debug_mode: false // allways false
     };
     new_conf.save(&get_config_path()).unwrap();
