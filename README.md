@@ -24,5 +24,11 @@ Options:
     --version           Show version.
 
 Environment Variables:
-    SLACK_WEBHOOK_URL   Incoming Webhook URL. (required)
+    SLACK_WEBHOOK_URL   Incoming Webhook URL. (deprecated)
+```
+
+## Configuration
+
+```
+$ slacks --configure
 ```
