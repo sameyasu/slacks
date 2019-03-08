@@ -49,7 +49,7 @@ pub fn configure(debug: bool) {
     let _ = configs.load(&get_config_path());
 
     let new_conf = Configs {
-        webhook_url: configure_webhook_url(&configs),
+        webhook_url: configure_var(&configs.webhook_url, "Slack Webhook URL", validate_webhook_url),
         channel: None,
         username: None,
         icon_emoji: None,
@@ -103,22 +103,28 @@ fn read_line() -> Result<String, Error> {
     Ok(buffer.trim().to_string())
 }
 
-fn configure_webhook_url(conf: &Configs) -> Option<String> {
-    let current_url = conf.webhook_url.as_ref();
-    let mut webhook_url = None;
-    while let Err(e) = validate_webhook_url(&webhook_url) {
-        if webhook_url.is_some() {
+fn configure_var<F>(var: &Option<String>, description: &str, validate_fn: F) -> Option<String>
+    where F: Fn(&Option<String>) -> Result<(), Error>
+{
+    let var_ref = var.as_ref();
+    let mut inputted = None;
+    while let Err(e) = validate_fn(&inputted) {
+        if inputted.is_some() {
             println!("{}", e);
         }
-        print!("Slack Webhook URL [{}]: ", match current_url {
-            Some(u) => u,
-            None => "None"
-        });
+        print!(
+            "{} [{}]: ",
+            description,
+            match var_ref {
+                Some(u) => u,
+                None => "None"
+            }
+        );
         io::stdout().flush().unwrap();
-        webhook_url = match &read_line().unwrap() {
-            url if url.is_empty() => Some(current_url.unwrap().to_string()),
+        inputted = match &read_line().unwrap() {
+            url if url.is_empty() => Some(var_ref.unwrap().to_string()),
             url => Some(url.to_string())
         };
     }
-    webhook_url
+    inputted
 }
