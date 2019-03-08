@@ -145,11 +145,9 @@ fn get_icon_emoji(args: &docopt::ArgvMap) -> Result<String, Error> {
 }
 
 fn get_channel(args: &docopt::ArgvMap) -> Result<String, Error> {
-    match args.get_str("-c").trim() {
-        channel if channel.is_empty() => Ok(DEFAULT_CHANNEL.to_string()),
-        channel if channel.len() > 20 => Err(Error::Argv("channel is too long".to_string())),
-        channel => Ok(channel.to_string())
-    }
+    let channel = Some(args.get_str("-c").trim().to_string());
+    validate_channel(&channel)?;
+    Ok(channel.unwrap())
 }
 
 fn get_message(args: &docopt::ArgvMap) -> Result<String, Error> {
@@ -182,6 +180,15 @@ fn validate_webhook_url(url: &Option<String>) -> Result<(), Error> {
         None => Err(Error::Argv("webhook_url is not set.".to_string())),
         Some(u) if regexp.is_match(u) => Ok(()),
         _ => Err(Error::Argv("webhook_url is invalid format.".to_string()))
+    }
+}
+
+fn validate_channel(channel: &Option<String>) -> Result<(), Error> {
+    match channel {
+        None => Err(Error::Argv("channel is not set".to_string())),
+        Some(channel) if channel.is_empty() => Err(Error::Argv("channel is empty".to_string())),
+        Some(channel) if channel.len() > 20 => Err(Error::Argv("channel is too long".to_string())),
+        Some(_) => Ok(()),
     }
 }
 
@@ -244,16 +251,6 @@ mod get_channel_tests {
     use super::*;
 
     #[test]
-    fn default() {
-        let argv = vec!["slacks", "this is a test"];
-        let args = tests::parse_argv(argv).unwrap();
-        assert_eq!(
-            "#general".to_string(),
-            get_channel(&args).unwrap()
-        );
-    }
-
-    #[test]
     fn set_channel() {
         let argv = vec!["slacks", "-c", "#public-channel", "this is a test"];
         let args = tests::parse_argv(argv).unwrap();
@@ -264,6 +261,7 @@ mod get_channel_tests {
     }
 
     #[test]
+    #[should_panic(expected="channel is empty")]
     fn empty() {
         let argv = vec!["slacks", "-c", "", "this is a test"];
         let args = tests::parse_argv(argv).unwrap();

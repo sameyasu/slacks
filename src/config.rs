@@ -50,9 +50,9 @@ pub fn configure(debug: bool) {
 
     let new_conf = Configs {
         webhook_url: configure_var(&configs.webhook_url, "Slack Webhook URL", validate_webhook_url),
-        channel: None,
-        username: None,
-        icon_emoji: None,
+        channel: configure_var(&configs.channel, "Slack Channel", validate_channel),
+        username: Some(DEFAULT_USERNAME.to_string()),
+        icon_emoji: Some(DEFAULT_ICON_EMOJI.to_string()),
         debug_mode: false // allways false
     };
     new_conf.save(&get_config_path()).unwrap();
@@ -62,7 +62,7 @@ pub fn configure(debug: bool) {
 pub fn get_configs(is_debug_mode: bool) -> Configs {
     let mut configs = Configs {
         webhook_url: None,
-        channel: None,
+        channel: Some(DEFAULT_CHANNEL.to_string()),
         username: None,
         icon_emoji: None,
         debug_mode: is_debug_mode
@@ -103,12 +103,12 @@ fn read_line() -> Result<String, Error> {
     Ok(buffer.trim().to_string())
 }
 
-fn configure_var<F>(var: &Option<String>, description: &str, validate_fn: F) -> Option<String>
+fn configure_var<F>(var: &Option<String>, description: &str, validator: F) -> Option<String>
     where F: Fn(&Option<String>) -> Result<(), Error>
 {
     let var_ref = var.as_ref();
     let mut inputted = None;
-    while let Err(e) = validate_fn(&inputted) {
+    while let Err(e) = validator(&inputted) {
         if inputted.is_some() {
             println!("{}", e);
         }
@@ -122,7 +122,7 @@ fn configure_var<F>(var: &Option<String>, description: &str, validate_fn: F) -> 
         );
         io::stdout().flush().unwrap();
         inputted = match &read_line().unwrap() {
-            url if url.is_empty() => Some(var_ref.unwrap().to_string()),
+            url if url.is_empty() && var_ref.is_some() => Some(var_ref.unwrap().to_string()),
             url => Some(url.to_string())
         };
     }
