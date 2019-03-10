@@ -54,7 +54,11 @@ pub fn configure(debug: bool) {
         debug_mode: debug
     };
 
-    let config_path = get_config_path();
+    let config_path = get_config_path()
+        .unwrap_or_else(|e| {
+            let err = Error::Argv(e.to_string());
+            err.exit();
+        });
     let _ = configs.load(&config_path);
 
     let new_conf = Configs {
@@ -80,18 +84,29 @@ pub fn get_configs(is_debug_mode: bool) -> Configs {
         debug_mode: is_debug_mode
     };
 
-    let _ = configs.load(&get_config_path())
-        .map_err(|e| {
+    match get_config_path() {
+        Ok(path) => {
+            match configs.load(&path) {
+                Ok(()) => {
+                    if is_debug_mode {
+                        eprintln!("Loaded {:?}", configs);
+                    }
+                },
+                Err(e) => {
+                    if is_debug_mode {
+                        eprintln!("Failed to load config file. Cause: {}", e);
+                    }
+                    // ignore error
+                }
+            }
+        },
+        Err(e) => {
             if is_debug_mode {
-                eprintln!("Failed to load config file. Cause: {}", e);
+                eprintln!("Failed to get config path: {}", e);
             }
             // ignore error
-        })
-        .map(|()| {
-            if is_debug_mode {
-                eprintln!("Loaded {:?}", configs);
-            }
-        });
+        }
+    };
 
     let _ = std::env::var("SLACK_WEBHOOK_URL")
         .map(|url| {
@@ -102,11 +117,10 @@ pub fn get_configs(is_debug_mode: bool) -> Configs {
     configs
 }
 
-fn get_config_path() -> String {
+fn get_config_path() -> Result<String, String> {
     std::env::var("HOME")
-        .map(|home| format!("{}{}", home, DEFAULT_CONFIG_PATH).to_string())
-        // FIXME: should return Result type
-        .unwrap_or_else(|e| panic!("No found HOME directory. {}", e))
+        .map(|home| format!("{}{}", home, DEFAULT_CONFIG_PATH).into())
+        .map_err(|e| format!("$HOME does not exist. {}", e).into())
 }
 
 fn read_line() -> Result<String, Error> {
