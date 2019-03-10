@@ -19,6 +19,7 @@ Options:
     -u <username>       Set username. (default: slacks)
     -i <icon_emoji>     Set icon emoji. (default: :slack:)
     -c <channel>        Set posting channel. (default: #general)
+    --configure         Do configuration for your Slack.
     --debug             Show debug messages.
     -h, --help          Show this message.
     --version           Show version.
