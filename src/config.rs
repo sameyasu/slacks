@@ -1,4 +1,4 @@
-/// configure.rs
+/// config.rs
 use super::*;
 use std::fs::File;
 use std::io::{self, Write, BufReader, BufWriter};
@@ -46,7 +46,8 @@ pub fn configure(debug: bool) {
         debug_mode: debug
     };
 
-    let _ = configs.load(&get_config_path());
+    let config_path = get_config_path();
+    let _ = configs.load(&config_path);
 
     let new_conf = Configs {
         webhook_url: configure_var(&configs.webhook_url, "Slack Webhook URL", validate_webhook_url),
@@ -55,8 +56,11 @@ pub fn configure(debug: bool) {
         icon_emoji: configure_var(&configs.icon_emoji, "Default Icon Emoji", validate_icon_emoji),
         debug_mode: false // allways false
     };
-    new_conf.save(&get_config_path()).unwrap();
-    println!("Saved: {:?}", &new_conf);
+    new_conf.save(&config_path).unwrap();
+    if debug {
+        println!("Saved: {:?}", &new_conf);
+    }
+    println!("Saved your configuration: {}", &config_path);
 }
 
 pub fn get_configs(is_debug_mode: bool) -> Configs {
