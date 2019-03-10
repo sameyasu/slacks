@@ -1,6 +1,6 @@
 [package]
 name = "slacks"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["sameyasu <sameyasu@gmail.com>"]
 
 [dependencies]
