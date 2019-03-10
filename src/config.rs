@@ -75,13 +75,13 @@ pub fn get_configs(is_debug_mode: bool) -> Configs {
     let _ = configs.load(&get_config_path())
         .map_err(|e| {
             if is_debug_mode {
-                println!("Failed to load config file. Cause: {}", e);
+                eprintln!("Failed to load config file. Cause: {}", e);
             }
             // ignore error
         })
         .map(|()| {
             if is_debug_mode {
-                println!("Loaded {:?}", configs);
+                eprintln!("Loaded {:?}", configs);
             }
         });
 

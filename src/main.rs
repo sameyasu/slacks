@@ -75,8 +75,8 @@ fn main() {
     let conf = config::get_configs(is_debug_mode(&args));
 
     if conf.debug_mode {
-        println!("Configs: {:?}", conf);
-        println!("Args: {:?}", args);
+        eprintln!("Configs: {:?}", conf);
+        eprintln!("Args: {:?}", args);
     }
 
     validate_webhook_url(&conf.webhook_url)
@@ -89,18 +89,18 @@ fn main() {
         text: get_message(&args).unwrap_or_else(|e| e.exit())
     };
     if conf.debug_mode {
-        println!("Payload: {:?}", payload);
+        eprintln!("Payload: {:?}", payload);
     }
 
     let json = serde_json::to_string(&payload).unwrap();
     if conf.debug_mode {
-        println!("JSON: {}", &json);
+        eprintln!("JSON: {}", &json);
     }
 
     let resp = post_message(&conf.webhook_url.unwrap(), &json).unwrap_or_else(|e| e.exit());
     if is_debug_mode(&args) {
-        println!("Url: {:?}", resp.url().as_str());
-        println!("Status: {:?}", resp.status());
+        eprintln!("Url: {:?}", resp.url().as_str());
+        eprintln!("Status: {:?}", resp.status());
     }
 }
 
