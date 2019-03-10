@@ -1,6 +1,7 @@
-/// configure.rs
+/// config.rs
 use super::*;
-use std::fs::File;
+use std::path::Path;
+use std::fs::{DirBuilder, File};
 use std::io::{self, Write, BufReader, BufWriter};
 
 #[derive(Serialize,Deserialize,Debug,Clone)]
@@ -26,7 +27,14 @@ impl Configs {
             })
     }
 
-    fn save(&self, path: &str) -> Result<(), String> {
+    fn save(&self, dest: &str) -> Result<(), String> {
+        let path = Path::new(dest);
+
+        let _ = DirBuilder::new()
+            .recursive(true)
+            .create(path.parent().unwrap())
+            .map_err(|e| e.to_string());
+
         File::create(path)
             .map_err(|e| e.to_string())
             .and_then(|file|
@@ -46,7 +54,12 @@ pub fn configure(debug: bool) {
         debug_mode: debug
     };
 
-    let _ = configs.load(&get_config_path());
+    let config_path = get_config_path()
+        .unwrap_or_else(|e| {
+            let err = Error::Argv(e.to_string());
+            err.exit();
+        });
+    let _ = configs.load(&config_path);
 
     let new_conf = Configs {
         webhook_url: configure_var(&configs.webhook_url, "Slack Webhook URL", validate_webhook_url),
@@ -55,8 +68,11 @@ pub fn configure(debug: bool) {
         icon_emoji: configure_var(&configs.icon_emoji, "Default Icon Emoji", validate_icon_emoji),
         debug_mode: false // allways false
     };
-    new_conf.save(&get_config_path()).unwrap();
-    println!("Saved: {:?}", &new_conf);
+    new_conf.save(&config_path).unwrap();
+    if debug {
+        println!("Saved: {:?}", &new_conf);
+    }
+    println!("Saved your configuration: {}", &config_path);
 }
 
 pub fn get_configs(is_debug_mode: bool) -> Configs {
@@ -68,18 +84,29 @@ pub fn get_configs(is_debug_mode: bool) -> Configs {
         debug_mode: is_debug_mode
     };
 
-    let _ = configs.load(&get_config_path())
-        .map_err(|e| {
+    match get_config_path() {
+        Ok(path) => {
+            match configs.load(&path) {
+                Ok(()) => {
+                    if is_debug_mode {
+                        eprintln!("Loaded {:?}", configs);
+                    }
+                },
+                Err(e) => {
+                    if is_debug_mode {
+                        eprintln!("Failed to load config file. Cause: {}", e);
+                    }
+                    // ignore error
+                }
+            }
+        },
+        Err(e) => {
             if is_debug_mode {
-                println!("Failed to load config file. Cause: {}", e);
+                eprintln!("Failed to get config path: {}", e);
             }
             // ignore error
-        })
-        .map(|()| {
-            if is_debug_mode {
-                println!("Loaded {:?}", configs);
-            }
-        });
+        }
+    };
 
     let _ = std::env::var("SLACK_WEBHOOK_URL")
         .map(|url| {
@@ -90,10 +117,10 @@ pub fn get_configs(is_debug_mode: bool) -> Configs {
     configs
 }
 
-fn get_config_path() -> String {
+fn get_config_path() -> Result<String, String> {
     std::env::var("HOME")
-        .map(|home| format!("{}{}", home, DEFAULT_CONFIG_PATH).to_string())
-        .unwrap_or(DEFAULT_CONFIG_PATH.to_string())
+        .map(|home| format!("{}{}", home, DEFAULT_CONFIG_PATH).into())
+        .map_err(|e| format!("$HOME does not exist. {}", e).into())
 }
 
 fn read_line() -> Result<String, Error> {
