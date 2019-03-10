@@ -1,6 +1,7 @@
 /// config.rs
 use super::*;
-use std::fs::File;
+use std::path::Path;
+use std::fs::{DirBuilder, File};
 use std::io::{self, Write, BufReader, BufWriter};
 
 #[derive(Serialize,Deserialize,Debug,Clone)]
@@ -26,7 +27,14 @@ impl Configs {
             })
     }
 
-    fn save(&self, path: &str) -> Result<(), String> {
+    fn save(&self, dest: &str) -> Result<(), String> {
+        let path = Path::new(dest);
+
+        let _ = DirBuilder::new()
+            .recursive(true)
+            .create(path.parent().unwrap())
+            .map_err(|e| e.to_string());
+
         File::create(path)
             .map_err(|e| e.to_string())
             .and_then(|file|
@@ -97,7 +105,8 @@ pub fn get_configs(is_debug_mode: bool) -> Configs {
 fn get_config_path() -> String {
     std::env::var("HOME")
         .map(|home| format!("{}{}", home, DEFAULT_CONFIG_PATH).to_string())
-        .unwrap_or(DEFAULT_CONFIG_PATH.to_string())
+        // FIXME: should return Result type
+        .unwrap_or_else(|e| panic!("No found HOME directory. {}", e))
 }
 
 fn read_line() -> Result<String, Error> {
