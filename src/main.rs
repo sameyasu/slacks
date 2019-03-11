@@ -1,18 +1,18 @@
 #[macro_use]
 extern crate serde_derive;
-extern crate serde;
-extern crate serde_json;
-extern crate reqwest;
 extern crate docopt;
 extern crate regex;
+extern crate reqwest;
+extern crate serde;
+extern crate serde_json;
 
 mod config;
 
-use std::io::{self, Read};
-use std::time::Duration;
+use config::Configs;
 use docopt::{Docopt, Error};
 use regex::Regex;
-use config::Configs;
+use std::io::{self, Read};
+use std::time::Duration;
 
 const DEFAULT_CONFIG_PATH: &'static str = "/.config/slacks.json";
 const DEFAULT_USERNAME: &'static str = "slacks";
@@ -43,18 +43,18 @@ Environment Variables:
 
 ";
 
-#[derive(Serialize,Deserialize,Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 struct Payload {
     channel: String,
     username: String,
     icon_emoji: String,
-    text: String
+    text: String,
 }
 
 fn main() {
     let args = Docopt::new(USAGE)
-                    .and_then(|d| d.parse())
-                    .unwrap_or_else(|e| e.exit());
+        .and_then(|d| d.parse())
+        .unwrap_or_else(|e| e.exit());
 
     if args.get_bool("-h") || args.get_bool("--help") {
         let err = Error::Help;
@@ -62,9 +62,11 @@ fn main() {
     }
 
     if args.get_bool("--version") {
-        let err = Error::Usage(
-            format!("{} v{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"))
-        );
+        let err = Error::Usage(format!(
+            "{} v{}",
+            env!("CARGO_PKG_NAME"),
+            env!("CARGO_PKG_VERSION")
+        ));
         err.exit();
     }
 
@@ -80,14 +82,13 @@ fn main() {
         eprintln!("Args: {:?}", args);
     }
 
-    validate_webhook_url(&conf.webhook_url)
-        .unwrap_or_else(|e| e.exit());
+    validate_webhook_url(&conf.webhook_url).unwrap_or_else(|e| e.exit());
 
     let payload = Payload {
         channel: get_channel(&args, &conf).unwrap_or_else(|e| e.exit()),
         username: get_username(&args, &conf).unwrap_or_else(|e| e.exit()),
         icon_emoji: get_icon_emoji(&args, &conf).unwrap_or_else(|e| e.exit()),
-        text: get_message(&args).unwrap_or_else(|e| e.exit())
+        text: get_message(&args).unwrap_or_else(|e| e.exit()),
     };
     if conf.debug_mode {
         eprintln!("Payload: {:?}", payload);
@@ -116,23 +117,23 @@ fn post_message(url: &str, json: &str) -> Result<reqwest::Response, Error> {
             if res.status() == reqwest::StatusCode::OK {
                 Ok(res)
             } else {
-                Err(
-                    Error::Argv(
-                        format!("Failed to post to Slack. StatusCode: {}", res.status())
-                    )
-                )
+                Err(Error::Argv(format!(
+                    "Failed to post to Slack. StatusCode: {}",
+                    res.status()
+                )))
             }
-        },
-        Err(err) => Err(
-            Error::Deserialize(format!("Failed to post to Slack. Error: {}", err))
-        )
+        }
+        Err(err) => Err(Error::Deserialize(format!(
+            "Failed to post to Slack. Error: {}",
+            err
+        ))),
     }
 }
 
 fn get_username(args: &docopt::ArgvMap, configs: &Configs) -> Result<String, Error> {
     let username = Some(match args.get_str("-u").trim() {
         u if u.is_empty() => configs.username.as_ref().unwrap().to_string(),
-        u => u.into()
+        u => u.into(),
     });
     validate_username(&username)?;
     Ok(username.unwrap())
@@ -141,7 +142,7 @@ fn get_username(args: &docopt::ArgvMap, configs: &Configs) -> Result<String, Err
 fn get_icon_emoji(args: &docopt::ArgvMap, configs: &Configs) -> Result<String, Error> {
     let icon_emoji = Some(match args.get_str("-i").trim() {
         i if i.is_empty() => configs.icon_emoji.as_ref().unwrap().to_string(),
-        i => i.into()
+        i => i.into(),
     });
     validate_icon_emoji(&icon_emoji)?;
     Ok(icon_emoji.unwrap())
@@ -150,7 +151,7 @@ fn get_icon_emoji(args: &docopt::ArgvMap, configs: &Configs) -> Result<String, E
 fn get_channel(args: &docopt::ArgvMap, configs: &Configs) -> Result<String, Error> {
     let channel = Some(match args.get_str("-c").trim() {
         c if c.is_empty() => configs.channel.as_ref().unwrap().to_string(),
-        c => c.into()
+        c => c.into(),
     });
     validate_channel(&channel)?;
     Ok(channel.unwrap())
@@ -162,16 +163,15 @@ fn get_message(args: &docopt::ArgvMap) -> Result<String, Error> {
         let mut buffer = String::new();
         match io::stdin().read_to_string(&mut buffer) {
             Ok(_) => Ok(buffer.into()),
-            Err(err) => Err(
-                Error::Argv(
-                    format!("Failed to read from STDIN. Error:{:?}", err)
-                )
-            )
+            Err(err) => Err(Error::Argv(format!(
+                "Failed to read from STDIN. Error:{:?}",
+                err
+            ))),
         }
     } else {
         match args.get_str("<message>") {
             msg if msg.is_empty() => Err(Error::Usage("Empty message".into())),
-            msg => Ok(msg.into())
+            msg => Ok(msg.into()),
         }
     }
 }
@@ -185,7 +185,7 @@ fn validate_webhook_url(url: &Option<String>) -> Result<(), Error> {
     match url {
         None => Err(Error::Argv("webhook_url is not set.".into())),
         Some(u) if regexp.is_match(u) => Ok(()),
-        _ => Err(Error::Argv("webhook_url is invalid format.".into()))
+        _ => Err(Error::Argv("webhook_url is invalid format.".into())),
     }
 }
 
@@ -213,7 +213,9 @@ fn validate_icon_emoji(icon_emoji: &Option<String>) -> Result<(), Error> {
         None => Err(Error::Argv("icon_emoji is not set.".into())),
         Some(icon) if icon.is_empty() => Err(Error::Argv("icon_emoji is empty.".into())),
         Some(icon) if regexp.is_match(icon) => Ok(()),
-        _ => Err(Error::Argv("icon_emoji is invalid format. (e.g. :robot_face:)".into()))
+        _ => Err(Error::Argv(
+            "icon_emoji is invalid format. (e.g. :robot_face:)".into(),
+        )),
     }
 }
 
@@ -233,21 +235,21 @@ mod get_message_tests {
     use super::*;
 
     #[test]
-    #[should_panic(expected="WithProgramUsage")]
+    #[should_panic(expected = "WithProgramUsage")]
     fn no_args() {
         let argv = vec!["slacks"];
         let _args = tests::parse_argv(argv).unwrap();
     }
 
     #[test]
-    #[should_panic(expected="WithProgramUsage")]
+    #[should_panic(expected = "WithProgramUsage")]
     fn not_specified_message() {
         let argv = vec!["slacks", "-c", "#test-channel"];
         let _args = tests::parse_argv(argv).unwrap();
     }
 
     #[test]
-    #[should_panic(expected="Empty message")]
+    #[should_panic(expected = "Empty message")]
     fn empty() {
         let argv = vec!["slacks", "-c", "#test-channel", ""];
         let args = tests::parse_argv(argv).unwrap();
@@ -258,10 +260,7 @@ mod get_message_tests {
     fn ok() {
         let argv = vec!["slacks", "this is a test"];
         let args = tests::parse_argv(argv).unwrap();
-        assert_eq!(
-            "this is a test",
-            get_message(&args).unwrap()
-        );
+        assert_eq!("this is a test", get_message(&args).unwrap());
     }
 
     #[test]
@@ -270,10 +269,7 @@ mod get_message_tests {
     fn read_from_stdin() {
         let argv = vec!["slacks", "-"];
         let args = tests::parse_argv(argv).unwrap();
-        assert_eq!(
-            "this is a test from stdin",
-            get_message(&args).unwrap()
-        );
+        assert_eq!("this is a test from stdin", get_message(&args).unwrap());
     }
 }
 
@@ -282,20 +278,20 @@ mod validate_webhook_url_tests {
     use super::*;
 
     #[test]
-    #[should_panic(expected="webhook_url is not set.")]
+    #[should_panic(expected = "webhook_url is not set.")]
     fn none() {
         let _res = validate_webhook_url(&None).unwrap();
     }
 
     #[test]
-    #[should_panic(expected="webhook_url is invalid format.")]
+    #[should_panic(expected = "webhook_url is invalid format.")]
     fn empty_str() {
         let empty = Some("".into());
         let _res = validate_webhook_url(&empty).unwrap();
     }
 
     #[test]
-    #[should_panic(expected="webhook_url is invalid format.")]
+    #[should_panic(expected = "webhook_url is invalid format.")]
     fn invalid_url() {
         let invalid_url = Some("https://this.is.an.invalid.url/".into());
         let _res = validate_webhook_url(&invalid_url).unwrap();
@@ -314,20 +310,20 @@ mod validate_channel_tests {
     use super::*;
 
     #[test]
-    #[should_panic(expected="channel is not set")]
+    #[should_panic(expected = "channel is not set")]
     fn none() {
         let _res = validate_channel(&None).unwrap();
     }
 
     #[test]
-    #[should_panic(expected="channel is empty")]
+    #[should_panic(expected = "channel is empty")]
     fn empty() {
         let empty = Some("".into());
         let _res = validate_channel(&empty).unwrap();
     }
 
     #[test]
-    #[should_panic(expected="channel is too long")]
+    #[should_panic(expected = "channel is too long")]
     fn over_20chars() {
         let long = Some("#12345678901234567890".into());
         let _res = validate_channel(&long).unwrap();
@@ -360,20 +356,20 @@ mod validate_username_tests {
     use super::*;
 
     #[test]
-    #[should_panic(expected="username is not set")]
+    #[should_panic(expected = "username is not set")]
     fn none() {
         let _res = validate_username(&None).unwrap();
     }
 
     #[test]
-    #[should_panic(expected="username is empty")]
+    #[should_panic(expected = "username is empty")]
     fn empty_str() {
         let empty = Some("".into());
         let _res = validate_username(&empty).unwrap();
     }
 
     #[test]
-    #[should_panic(expected="username is too long")]
+    #[should_panic(expected = "username is too long")]
     fn over_20chars() {
         let long = Some("012345678901234567890".into());
         let _res = validate_username(&long).unwrap();
@@ -392,13 +388,13 @@ mod validate_icon_emoji_tests {
     use super::*;
 
     #[test]
-    #[should_panic(expected="icon_emoji is not set.")]
+    #[should_panic(expected = "icon_emoji is not set.")]
     fn none() {
         let _res = validate_icon_emoji(&None).unwrap();
     }
 
     #[test]
-    #[should_panic(expected="icon_emoji is invalid format")]
+    #[should_panic(expected = "icon_emoji is invalid format")]
     fn over_20chars() {
         let invalid = Some("robot_face".into());
         let _res = validate_icon_emoji(&invalid).unwrap();
