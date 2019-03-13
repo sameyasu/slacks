@@ -45,7 +45,7 @@ impl Configs {
     }
 }
 
-pub fn configure(debug: bool) {
+pub fn configure(debug: bool) -> Result<(), Error> {
     let mut configs = Configs {
         webhook_url: None,
         channel: Some(DEFAULT_CHANNEL.to_string()),
@@ -54,10 +54,7 @@ pub fn configure(debug: bool) {
         debug_mode: debug,
     };
 
-    let config_path = get_config_path().unwrap_or_else(|e| {
-        let err = Error::Argv(e.to_string());
-        err.exit();
-    });
+    let config_path = get_config_path()?;
     let _ = configs.load(&config_path);
 
     #[rustfmt::skip]
@@ -89,6 +86,7 @@ pub fn configure(debug: bool) {
         println!("Saved: {:?}", &new_conf);
     }
     println!("Saved your configuration: {}", &config_path);
+    Ok(())
 }
 
 pub fn get_configs(is_debug_mode: bool) -> Configs {
@@ -132,18 +130,18 @@ pub fn get_configs(is_debug_mode: bool) -> Configs {
     configs
 }
 
-fn get_config_path() -> Result<String, String> {
+fn get_config_path() -> Result<String, Error> {
     std::env::var("HOME")
         .map(|home| format!("{}{}", home, DEFAULT_CONFIG_PATH).into())
-        .map_err(|e| format!("$HOME does not exist. {}", e).into())
+        .map_err(|e| Error::Argv(format!("$HOME does not exist. {}", e).into()))
 }
 
 fn read_line() -> Result<String, Error> {
     let mut buffer = String::new();
-    let _ = io::stdin()
+    io::stdin()
         .read_line(&mut buffer)
-        .unwrap_or_else(|_| panic!("Failed to read stdin".to_string()));
-    Ok(buffer.trim().to_string())
+        .map_err(|e| Error::Argv(format!("Failed to read stdin. {}", e).into()))
+        .map(|_| buffer.trim().to_string())
 }
 
 fn configure_var<F>(var: &Option<String>, description: &str, validator: F) -> Option<String>
