@@ -9,7 +9,7 @@ extern crate serde_json;
 mod config;
 
 use config::Configs;
-use docopt::{Docopt, Error};
+use docopt::{ArgvMap, Docopt, Error};
 use regex::Regex;
 use std::io::{self, Read};
 use std::time::Duration;
@@ -76,19 +76,22 @@ fn main() {
     }
 
     let conf = config::get_configs(is_debug_mode(&args));
+    messaging(&args, &conf).unwrap_or_else(|e| e.exit());
+}
 
+fn messaging(args: &ArgvMap, conf: &Configs) -> Result<(), Error> {
     if conf.debug_mode {
         eprintln!("Configs: {:?}", conf);
         eprintln!("Args: {:?}", args);
     }
 
-    validate_webhook_url(&conf.webhook_url).unwrap_or_else(|e| e.exit());
+    validate_webhook_url(&conf.webhook_url)?;
 
     let payload = Payload {
-        channel: get_channel(&args, &conf).unwrap_or_else(|e| e.exit()),
-        username: get_username(&args, &conf).unwrap_or_else(|e| e.exit()),
-        icon_emoji: get_icon_emoji(&args, &conf).unwrap_or_else(|e| e.exit()),
-        text: get_message(&args).unwrap_or_else(|e| e.exit()),
+        channel: get_channel(args, conf)?,
+        username: get_username(args, conf)?,
+        icon_emoji: get_icon_emoji(args, conf)?,
+        text: get_message(args)?,
     };
     if conf.debug_mode {
         eprintln!("Payload: {:?}", payload);
@@ -99,11 +102,13 @@ fn main() {
         eprintln!("JSON: {}", &json);
     }
 
-    let resp = post_message(&conf.webhook_url.unwrap(), &json).unwrap_or_else(|e| e.exit());
-    if is_debug_mode(&args) {
+    let resp = post_message(conf.webhook_url.as_ref().unwrap(), &json)?;
+    if conf.debug_mode {
         eprintln!("Url: {:?}", resp.url().as_str());
         eprintln!("Status: {:?}", resp.status());
     }
+
+    Ok(())
 }
 
 fn post_message(url: &str, json: &str) -> Result<reqwest::Response, Error> {
