@@ -15,7 +15,7 @@ Usage:
     slacks --version
 
 Options:
-    -                   Read message text from STDIN.
+    -                   Read message text via STDIN.
     -u <username>       Set username. (default: slacks)
     -i <icon_emoji>     Set icon emoji. (default: :slack:)
     -c <channel>        Set posting channel. (default: #general)

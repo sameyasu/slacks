@@ -9,7 +9,7 @@ extern crate serde_json;
 mod config;
 
 use config::Configs;
-use docopt::{Docopt, Error};
+use docopt::{ArgvMap, Docopt, Error};
 use regex::Regex;
 use std::io::{self, Read};
 use std::time::Duration;
@@ -29,7 +29,7 @@ Usage:
     slacks --version
 
 Options:
-    -                   Read message text from STDIN.
+    -                   Read message text via STDIN.
     -u <username>       Set username. (default: slacks)
     -i <icon_emoji>     Set icon emoji. (default: :slack:)
     -c <channel>        Set posting channel. (default: #general)
@@ -51,44 +51,63 @@ struct Payload {
     text: String,
 }
 
+trait SlacksArgs {
+    fn is_help_command(&self) -> bool;
+    fn is_version_command(&self) -> bool;
+    fn is_configure_command(&self) -> bool;
+    fn is_debug_mode(&self) -> bool;
+}
+
+impl SlacksArgs for ArgvMap {
+    fn is_help_command(&self) -> bool {
+        self.get_bool("-h") || self.get_bool("--help")
+    }
+    fn is_version_command(&self) -> bool {
+        self.get_bool("--version")
+    }
+    fn is_configure_command(&self) -> bool {
+        self.get_bool("--configure")
+    }
+    fn is_debug_mode(&self) -> bool {
+        self.get_bool("--debug")
+    }
+}
+
 fn main() {
     let args = Docopt::new(USAGE)
         .and_then(|d| d.parse())
         .unwrap_or_else(|e| e.exit());
 
-    if args.get_bool("-h") || args.get_bool("--help") {
-        let err = Error::Help;
-        err.exit();
-    }
-
-    if args.get_bool("--version") {
-        let err = Error::Usage(format!(
+    let result = match &args {
+        args if args.is_help_command() => Err(Error::Help),
+        args if args.is_version_command() => Err(Error::Usage(format!(
             "{} v{}",
             env!("CARGO_PKG_NAME"),
             env!("CARGO_PKG_VERSION")
-        ));
-        err.exit();
-    }
+        ))),
+        args if args.is_configure_command() => config::configure(args.is_debug_mode()),
+        args => {
+            let conf = config::get_configs(args.is_debug_mode());
+            messaging(&args, &conf)
+        }
+    };
 
-    if args.get_bool("--configure") {
-        config::configure(is_debug_mode(&args));
-        std::process::exit(0);
-    }
+    result.unwrap_or_else(|e| e.exit())
+}
 
-    let conf = config::get_configs(is_debug_mode(&args));
-
+fn messaging(args: &ArgvMap, conf: &Configs) -> Result<(), Error> {
     if conf.debug_mode {
         eprintln!("Configs: {:?}", conf);
         eprintln!("Args: {:?}", args);
     }
 
-    validate_webhook_url(&conf.webhook_url).unwrap_or_else(|e| e.exit());
+    validate_webhook_url(&conf.webhook_url)?;
 
     let payload = Payload {
-        channel: get_channel(&args, &conf).unwrap_or_else(|e| e.exit()),
-        username: get_username(&args, &conf).unwrap_or_else(|e| e.exit()),
-        icon_emoji: get_icon_emoji(&args, &conf).unwrap_or_else(|e| e.exit()),
-        text: get_message(&args).unwrap_or_else(|e| e.exit()),
+        channel: get_channel(args, conf)?,
+        username: get_username(args, conf)?,
+        icon_emoji: get_icon_emoji(args, conf)?,
+        text: get_message(args)?,
     };
     if conf.debug_mode {
         eprintln!("Payload: {:?}", payload);
@@ -99,11 +118,13 @@ fn main() {
         eprintln!("JSON: {}", &json);
     }
 
-    let resp = post_message(&conf.webhook_url.unwrap(), &json).unwrap_or_else(|e| e.exit());
-    if is_debug_mode(&args) {
+    let resp = post_message(conf.webhook_url.as_ref().unwrap(), &json)?;
+    if conf.debug_mode {
         eprintln!("Url: {:?}", resp.url().as_str());
         eprintln!("Status: {:?}", resp.status());
     }
+
+    Ok(())
 }
 
 fn post_message(url: &str, json: &str) -> Result<reqwest::Response, Error> {
@@ -174,10 +195,6 @@ fn get_message(args: &docopt::ArgvMap) -> Result<String, Error> {
             msg => Ok(msg.into()),
         }
     }
-}
-
-fn is_debug_mode(args: &docopt::ArgvMap) -> bool {
-    args.get_bool("--debug")
 }
 
 fn validate_webhook_url(url: &Option<String>) -> Result<(), Error> {
