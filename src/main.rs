@@ -14,13 +14,13 @@ use regex::Regex;
 use std::io::{self, Read};
 use std::time::Duration;
 
-const DEFAULT_CONFIG_PATH: &'static str = "/.config/slacks.json";
-const DEFAULT_USERNAME: &'static str = "slacks";
-const DEFAULT_ICON_EMOJI: &'static str = ":slack:";
-const DEFAULT_CHANNEL: &'static str = "#general";
+const DEFAULT_CONFIG_PATH: &str = "/.config/slacks.json";
+const DEFAULT_USERNAME: &str = "slacks";
+const DEFAULT_ICON_EMOJI: &str = ":slack:";
+const DEFAULT_CHANNEL: &str = "#general";
 const TIMEOUT_IN_SEC: u64 = 10;
 
-const USAGE: &'static str = "
+const USAGE: &str = "
 Usage:
     slacks [-u <username>] [-i <icon_emoji>] [-c <channel>] [--debug] -
     slacks [-u <username>] [-i <icon_emoji>] [-c <channel>] [--debug] <message>
@@ -183,7 +183,7 @@ fn get_message(args: &docopt::ArgvMap) -> Result<String, Error> {
         // read from STDIN
         let mut buffer = String::new();
         match io::stdin().read_to_string(&mut buffer) {
-            Ok(_) => Ok(buffer.into()),
+            Ok(_) => Ok(buffer),
             Err(err) => Err(Error::Argv(format!(
                 "Failed to read from STDIN. Error:{:?}",
                 err
