@@ -132,15 +132,15 @@ pub fn get_configs(is_debug_mode: bool) -> Configs {
 
 fn get_config_path() -> Result<String, Error> {
     std::env::var("HOME")
-        .map(|home| format!("{}{}", home, DEFAULT_CONFIG_PATH).into())
-        .map_err(|e| Error::Argv(format!("$HOME does not exist. {}", e).into()))
+        .map(|home| format!("{}{}", home, DEFAULT_CONFIG_PATH))
+        .map_err(|e| Error::Argv(format!("$HOME does not exist. {}", e)))
 }
 
 fn read_line() -> Result<String, Error> {
     let mut buffer = String::new();
     io::stdin()
         .read_line(&mut buffer)
-        .map_err(|e| Error::Argv(format!("Failed to read stdin. {}", e).into()))
+        .map_err(|e| Error::Argv(format!("Failed to read stdin. {}", e)))
         .map(|_| buffer.trim().to_string())
 }
 

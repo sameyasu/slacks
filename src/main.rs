@@ -14,13 +14,13 @@ use regex::Regex;
 use std::io::{self, Read};
 use std::time::Duration;
 
-const DEFAULT_CONFIG_PATH: &'static str = "/.config/slacks.json";
-const DEFAULT_USERNAME: &'static str = "slacks";
-const DEFAULT_ICON_EMOJI: &'static str = ":slack:";
-const DEFAULT_CHANNEL: &'static str = "#general";
+const DEFAULT_CONFIG_PATH: &str = "/.config/slacks.json";
+const DEFAULT_USERNAME: &str = "slacks";
+const DEFAULT_ICON_EMOJI: &str = ":slack:";
+const DEFAULT_CHANNEL: &str = "#general";
 const TIMEOUT_IN_SEC: u64 = 10;
 
-const USAGE: &'static str = "
+const USAGE: &str = "
 Usage:
     slacks [-u <username>] [-i <icon_emoji>] [-c <channel>] [--debug] -
     slacks [-u <username>] [-i <icon_emoji>] [-c <channel>] [--debug] <message>
@@ -151,7 +151,7 @@ fn post_message(url: &str, json: &str) -> Result<reqwest::Response, Error> {
     }
 }
 
-fn get_username(args: &docopt::ArgvMap, configs: &Configs) -> Result<String, Error> {
+fn get_username(args: &ArgvMap, configs: &Configs) -> Result<String, Error> {
     let username = Some(match args.get_str("-u").trim() {
         u if u.is_empty() => configs.username.as_ref().unwrap().to_string(),
         u => u.into(),
@@ -160,7 +160,7 @@ fn get_username(args: &docopt::ArgvMap, configs: &Configs) -> Result<String, Err
     Ok(username.unwrap())
 }
 
-fn get_icon_emoji(args: &docopt::ArgvMap, configs: &Configs) -> Result<String, Error> {
+fn get_icon_emoji(args: &ArgvMap, configs: &Configs) -> Result<String, Error> {
     let icon_emoji = Some(match args.get_str("-i").trim() {
         i if i.is_empty() => configs.icon_emoji.as_ref().unwrap().to_string(),
         i => i.into(),
@@ -169,7 +169,7 @@ fn get_icon_emoji(args: &docopt::ArgvMap, configs: &Configs) -> Result<String, E
     Ok(icon_emoji.unwrap())
 }
 
-fn get_channel(args: &docopt::ArgvMap, configs: &Configs) -> Result<String, Error> {
+fn get_channel(args: &ArgvMap, configs: &Configs) -> Result<String, Error> {
     let channel = Some(match args.get_str("-c").trim() {
         c if c.is_empty() => configs.channel.as_ref().unwrap().to_string(),
         c => c.into(),
@@ -178,12 +178,12 @@ fn get_channel(args: &docopt::ArgvMap, configs: &Configs) -> Result<String, Erro
     Ok(channel.unwrap())
 }
 
-fn get_message(args: &docopt::ArgvMap) -> Result<String, Error> {
+fn get_message(args: &ArgvMap) -> Result<String, Error> {
     if args.get_bool("-") {
         // read from STDIN
         let mut buffer = String::new();
         match io::stdin().read_to_string(&mut buffer) {
-            Ok(_) => Ok(buffer.into()),
+            Ok(_) => Ok(buffer),
             Err(err) => Err(Error::Argv(format!(
                 "Failed to read from STDIN. Error:{:?}",
                 err
@@ -239,7 +239,6 @@ fn validate_icon_emoji(icon_emoji: &Option<String>) -> Result<(), Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use docopt::ArgvMap;
 
     pub fn parse_argv(argv: Vec<&str>) -> Result<ArgvMap, Error> {
         let v = argv.into_iter();
