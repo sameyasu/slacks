@@ -1,7 +1,4 @@
-image: docker:stable
-
-services:
-    - docker:dind
+image: rust:1.32
 
 cache:
   key: ${CI_COMMIT_REF_SLUG}
@@ -10,28 +7,15 @@ cache:
     - target/
 
 before_script:
+    - rustup component add clippy
+    - mkdir -p .cargo-registry
 
 stages:
-    - build
-    - test
+    - check
 
-build:
-    stage: build
+check:
+    stage: check
     script:
-        - mkdir -p .cargo-registry
-        - docker run --rm -i
-            -w /opt
-            -v $(pwd):/opt
-            -v $(pwd)/.cargo-registry:/usr/local/cargo/registry
-            rust:1.32
-            cargo build --release
-
-test:
-    stage: test
-    script:
-        - docker run --rm -i
-            -w /opt
-            -v $(pwd):/opt
-            -v $(pwd)/.cargo-registry:/usr/local/cargo/registry
-            rust:1.32
-            cargo test --release
+        - cargo build --release
+        - cargo test --release
+        - cargo clippy -- -D warnings
