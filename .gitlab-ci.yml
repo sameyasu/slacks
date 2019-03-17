@@ -1,4 +1,4 @@
-image: rust:1.32
+image: rust:1.33
 
 cache:
   key: ${CI_COMMIT_REF_SLUG}
